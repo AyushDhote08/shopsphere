@@ -48,6 +48,17 @@ public class ProductServiceImpl implements ProductService {
             String sortBy,
             String sortDirection
     ) {
+        // Defensive validation for price range
+        if (minPrice != null && minPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new com.shopsphere.exception.BadRequestException("Minimum price cannot be negative");
+        }
+        if (maxPrice != null && maxPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new com.shopsphere.exception.BadRequestException("Maximum price cannot be negative");
+        }
+        if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
+            throw new com.shopsphere.exception.BadRequestException("Minimum price cannot be greater than maximum price");
+        }
+
         // Enforce safe pagination parameters
         int pageNumber = Math.max(0, page);
         int pageSize = (size <= 0 || size > 100) ? 12 : size;

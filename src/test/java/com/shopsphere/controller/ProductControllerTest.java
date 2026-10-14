@@ -71,6 +71,78 @@ class ProductControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/products: Should accept search, categoryId, price bounds, and sort parameters")
+    void shouldFilterProductsWithParameters() throws Exception {
+        ProductResponseDTO item = new ProductResponseDTO();
+        item.setId(102L);
+        item.setSku("PROD-002");
+        item.setName("Wireless Noise-Cancelling Headphones");
+        item.setSellingPrice(new BigDecimal("199.99"));
+
+        PageResponse<ProductResponseDTO> pageResponse = new PageResponse<>(
+                List.of(item), 0, 12, 1, 1, true, true, false, false
+        );
+
+        when(productService.getProducts(
+                eq("headphones"), eq(2L), eq(new BigDecimal("100.00")), eq(new BigDecimal("300.00")),
+                eq(true), eq(0), eq(12), eq("price"), eq("ASC")
+        )).thenReturn(pageResponse);
+
+        mockMvc.perform(get("/api/products")
+                        .param("query", "headphones")
+                        .param("categoryId", "2")
+                        .param("minPrice", "100.00")
+                        .param("maxPrice", "300.00")
+                        .param("inStockOnly", "true")
+                        .param("page", "0")
+                        .param("size", "12")
+                        .param("sortBy", "price")
+                        .param("sortDirection", "ASC"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content", hasSize(1)))
+                .andExpect(jsonPath("$.data.content[0].sku").value("PROD-002"));
+    }
+
+    @Test
+    @DisplayName("GET /api/products: Should return 400 when minPrice is negative")
+    void shouldReturn400WhenMinPriceIsNegative() throws Exception {
+        when(productService.getProducts(any(), any(), eq(new BigDecimal("-10.00")), any(), any(), eq(0), eq(12), any(), any()))
+                .thenThrow(new com.shopsphere.exception.BadRequestException("Minimum price cannot be negative"));
+
+        mockMvc.perform(get("/api/products")
+                        .param("minPrice", "-10.00"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Minimum price cannot be negative"));
+    }
+
+    @Test
+    @DisplayName("GET /api/products: Should return 400 when minPrice > maxPrice")
+    void shouldReturn400WhenMinPriceExceedsMaxPrice() throws Exception {
+        when(productService.getProducts(any(), any(), eq(new BigDecimal("200.00")), eq(new BigDecimal("50.00")), any(), eq(0), eq(12), any(), any()))
+                .thenThrow(new com.shopsphere.exception.BadRequestException("Minimum price cannot be greater than maximum price"));
+
+        mockMvc.perform(get("/api/products")
+                        .param("minPrice", "200.00")
+                        .param("maxPrice", "50.00"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Minimum price cannot be greater than maximum price"));
+    }
+
+    @Test
+    @DisplayName("GET /api/products: Should return 400 when categoryId is not a valid number")
+    void shouldReturn400OnInvalidQueryParamType() throws Exception {
+        mockMvc.perform(get("/api/products")
+                        .param("categoryId", "not-a-number"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value(containsString("Parameter 'categoryId' should be of type 'Long'")));
+    }
+
+    @Test
     @DisplayName("GET /api/products/{id}: Should return product by ID")
     void shouldReturnProductById() throws Exception {
         ProductResponseDTO item = new ProductResponseDTO();

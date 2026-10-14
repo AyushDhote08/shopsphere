@@ -7,10 +7,10 @@
 | **Phase 0** | Requirements, Environment, Architecture, Git Setup, Project Baseline | **Completed** | Baseline verified & tested |
 | **Phase 1** | Database Migrations & Backend Foundation (Catalog, Categories, DTOs, APIs) | **Completed** | 36/36 tests passing & MySQL verified |
 | **Phase 2** | Authentication & Security (Spring Security, Sessions, BCrypt, Roles, CSRF, Auth UI) | **Completed** | 59/59 tests passing & live session verified |
-| **Phase 3** | Product Catalog & Categories (Frontend UI & Storefront Integration) | Planned | Catalog Grid + Filters + Pagination UI |
-| **Phase 4** | Frontend Storefront & API Integration | Planned | HTML/CSS/Vanilla JS UI |
-| **Phase 5** | Cart & Checkout Logic | Planned | Persistent Cart + Order Prep |
-| **Phase 6** | Orders, Simulated Payments & Concurrency-Safe Inventory | Planned | ACID Order Processing |
+| **Phase 3** | Product Catalog & Categories (Frontend UI & Storefront Integration) | **Completed** | 67/67 tests passing & live storefront verified |
+| **Phase 4** | Shopping Cart & Wishlist | Planned | Persistent Cart + Session Sync |
+| **Phase 5** | Checkout & Order Management Logic | Planned | Order Placement + Address Selection |
+| **Phase 6** | Payment Simulation & Concurrency-Safe Inventory | Planned | ACID Order Processing + Pessimistic Locking |
 | **Phase 7** | Admin Dashboard & Business Analytics | Planned | KPIs + Reports + Stock Alerts |
 | **Phase 8** | Reviews, Wishlist & Customer Extras | Planned | Ratings + Wishlist |
 | **Phase 9** | Comprehensive Testing, Security Audit & Hardening | Planned | Negative tests + Race conditions |
@@ -20,7 +20,7 @@
 
 ## 2. Current Status Summary
 
-- **Current Active Phase**: Transitioning to **Phase 3** (Product Catalog & Categories UI & Storefront Integration).
+- **Current Active Phase**: **Phase 3 Completed** (Product Catalog, Multi-Facet Filters, Search-as-you-type, Sorting, Pagination, Quick View, and Details Page).
 - **Completed Features**:
   - **Phase 0 Setup**:
     - Environment inspected (Java 24 runtime, Maven 3.9.6, MySQL 8.0, Git 2.51).
@@ -33,8 +33,7 @@
     - Built comprehensive DTO layer (`CategoryRequestDTO`, `CategoryResponseDTO`, `ProductRequestDTO`, `ProductResponseDTO`, `ApiResponse<T>`, `PageResponse<T>`).
     - Implemented business services `CategoryService` and `ProductService` with transactional boundaries, auto slug generation, safe pagination, and multi-field sorting.
     - Implemented REST controllers `CategoryController` and `ProductController` with OpenAPI annotations.
-    - Added centralized error handling via `@RestControllerAdvice` (`GlobalExceptionHandler`) handling 400, 404, 405, 409, and 500 errors.
-    - Seeded sample catalog in MySQL `shopsphere_db` (12 realistic products across 5 categories).
+    - Centralized error handling via `@RestControllerAdvice` (`GlobalExceptionHandler`).
   - **Phase 2 Authentication & Security**:
     - Applied Flyway migration `V3__create_users_and_addresses.sql` on MySQL creating normalized `users` and `addresses` tables and seeding dev admin account.
     - Implemented `User`, `Role`, and `Address` JPA entities.
@@ -48,31 +47,46 @@
       - JSON-based `AuthenticationEntryPoint` (401) and `AccessDeniedHandler` (403).
     - Implemented `AuthService` and `AuthServiceImpl` with defensive role assignment (strictly `ROLE_CUSTOMER` on registration).
     - Implemented `AuthController` (`/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/auth/csrf`).
-    - Built responsive frontend:
-      - `src/main/resources/static/login.html`: Login form with validation, alert banners, and demo credentials.
-      - `src/main/resources/static/register.html`: Registration form with field validation feedback.
-      - `src/main/resources/static/index.html`: Storefront homepage with dynamic navbar auth badge, session banner, and live product catalog.
-      - `src/main/resources/static/js/api.js`: Vanilla JS fetch client with CSRF token extraction and session cookies.
-      - `src/main/resources/static/js/auth.js`: Session management and live navbar rendering.
-      - `src/main/resources/static/css/styles.css`: Complete modern design system.
+  - **Phase 3 Product Catalog & Frontend Integration**:
+    - Enhanced `ProductServiceImpl`: Added defensive validation for price boundaries (`minPrice >= 0`, `maxPrice >= 0`, `minPrice <= maxPrice` returning 400 Bad Request).
+    - Enhanced `ProductSpecification`: Added explicit Left Joins on `category` and `parent` so parent category queries retrieve products from all nested subcategories.
+    - Configured `SecurityConfig`: Permitted public access to `/product.html` while strictly maintaining admin protections on mutating catalog endpoints.
+    - Authored responsive, accessible Vanilla JS frontend:
+      - `src/main/resources/static/index.html`: Storefront homepage with dynamic category pills, search bar, price filters, in-stock toggle, sorting dropdown, products grid, active filter chips, skeleton shimmer loaders, empty state, and pagination controls.
+      - `src/main/resources/static/product.html`: Dedicated deep-linkable Product Details page with breadcrumbs, large product image, full description, quantity selector with boundary validation, low-stock warning banners, and technical specifications table.
+      - `src/main/resources/static/js/catalog.js`: ES6 catalog manager with 350ms debounced search, multi-facet filtering, URL query parameter synchronization, and interactive Quick-View modal.
+      - `src/main/resources/static/js/product-detail.js`: ES6 product details manager with dynamic retrieval, quantity stepper, and simulated cart interaction.
+      - `src/main/resources/static/css/styles.css`: Complete responsive design system with modal, skeleton loading, filter toolbar, pagination, and breadcrumb styles.
 - **Known Defects**: None.
 - **Tests Executed & Actual Results**:
   - `mvn clean test`: **BUILD SUCCESS**
-  - Total Tests Run: **59**, Failures: **0**, Errors: **0**, Skipped: **0**
+  - Total Tests Run: **67**, Failures: **0**, Errors: **0**, Skipped: **0**
     - `ShopSphereApplicationTests`: 1 passed (Context Loads)
     - `CategoryRepositoryTest`: 5 passed (JPA persistence & query methods)
-    - `ProductRepositoryTest`: 5 passed (JPA persistence, SKU search, low stock queries)
+    - `ProductRepositoryTest`: 6 passed (Category hierarchy querying, keyword search, price boundaries, in-stock filtering)
     - `UserRepositoryTest`: 2 passed (Email normalization & lookup)
     - `PasswordEncoderTest`: 1 passed (BCrypt encoding & verification)
     - `CategoryServiceTest`: 5 passed (Mockito unit tests)
-    - `ProductServiceTest`: 5 passed (Mockito unit tests)
+    - `ProductServiceTest`: 8 passed (Mockito unit tests + price boundary validations)
     - `AuthServiceTest`: 4 passed (Mockito unit tests for register & login)
     - `CategoryControllerTest`: 7 passed (MockMvc REST API & validation tests)
-    - `ProductControllerTest`: 8 passed (MockMvc REST API, pagination, & validation tests)
+    - `ProductControllerTest`: 12 passed (MockMvc REST API, pagination, filtering, query param validation, 400/404 handling)
     - `AuthControllerTest`: 8 passed (MockMvc auth endpoints & validation)
     - `SecurityAuthorizationTest`: 8 passed (Role access control, public browsing, CSRF enforcement)
+- **Manual Live Verification**:
+  - Tested on `http://localhost:8080`:
+    - `GET /api/categories`: 200 OK (returned 5 categories)
+    - `GET /api/products`: 200 OK (returned 12 seeded products with pagination)
+    - `GET /api/products?categoryId=1`: 200 OK (returned all products under parent category Electronics and child categories)
+    - `GET /api/products?query=headphone`: 200 OK (keyword query)
+    - `GET /api/products?minPrice=50&maxPrice=100`: 200 OK (price filtering)
+    - `GET /api/products?minPrice=-10`: 400 Bad Request ("Minimum price cannot be negative")
+    - `GET /api/products?minPrice=200&maxPrice=50`: 400 Bad Request ("Minimum price cannot be greater than maximum price")
+    - `GET /api/products/1`: 200 OK (detailed product view)
+    - `GET /api/products/999`: 404 Not Found ("Product not found with id: '999'")
+    - `GET /product.html?id=1`: 200 OK (served responsive details page)
+    - `POST /api/products` unauthenticated: 403 Forbidden (verified security is preserved)
 - **Outstanding Tasks**:
-  - Await user review of Phase 2 deliverables.
-  - Prepare for Phase 3 (Product Catalog & Categories UI, rich filters, search bar, and details page).
+  - Await user review of Phase 3 deliverables.
 - **Next Recommended Action**:
-  - Implement Phase 3: Enhance frontend storefront with live search-as-you-type, category pill filters, price slider, in-stock toggle, pagination controls, and product details view.
+  - Proceed to Phase 4: Shopping Cart & Wishlist.

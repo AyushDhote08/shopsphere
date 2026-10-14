@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details — ShopSphere</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header class="navbar">
+        <a href="/index.html" class="brand-logo">
+            <span>ShopSphere</span>
+            <span class="brand-badge">Full-Stack</span>
+        </a>
+        <nav>
+            <ul class="nav-links">
+                <li><a href="/index.html" class="nav-link">Catalog</a></li>
+                <li><a href="/swagger-ui.html" target="_blank" class="nav-link">API Docs</a></li>
+            </ul>
+        </nav>
+        <div id="navbar-auth" class="nav-auth">
+            <a href="/login.html" class="btn btn-outline btn-sm">Sign In</a>
+            <a href="/register.html" class="btn btn-primary btn-sm">Register</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Breadcrumbs -->
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/index.html">Home</a>
+            <span class="breadcrumb-separator">/</span>
+            <a id="breadcrumb-category" href="/index.html">Catalog</a>
+            <span class="breadcrumb-separator">/</span>
+            <span id="breadcrumb-product" style="color: var(--text-primary); font-weight: 600;">Loading product...</span>
+        </nav>
+
+        <!-- Product Details Container -->
+        <div id="product-detail-container">
+            <div class="product-detail-layout">
+                <div class="detail-gallery skeleton" style="height: 400px;"></div>
+                <div class="detail-info">
+                    <div class="skeleton" style="height: 20px; width: 30%; margin-bottom: 1rem;"></div>
+                    <div class="skeleton" style="height: 36px; width: 85%; margin-bottom: 1rem;"></div>
+                    <div class="skeleton" style="height: 40px; width: 40%; margin-bottom: 1.5rem;"></div>
+                    <div class="skeleton" style="height: 100px; width: 100%; margin-bottom: 1.5rem;"></div>
+                    <div class="skeleton" style="height: 50px; width: 60%;"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 ShopSphere E-Commerce &bull; Spring Boot 3.4 &bull; MySQL &bull; Vanilla JS</p>
+    </footer>
+
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/product-detail.js"></script>
+</body>
+</html>

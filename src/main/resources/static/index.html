@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShopSphere — E-Commerce & Inventory Management</title>
+    <title>ShopSphere — Full-Stack E-Commerce Platform</title>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
         </a>
         <nav>
             <ul class="nav-links">
-                <li><a href="/index.html" class="nav-link">Catalog</a></li>
+                <li><a href="/index.html" class="nav-link" style="color: var(--primary); font-weight: 700;">Catalog</a></li>
                 <li><a href="/swagger-ui.html" target="_blank" class="nav-link">API Docs</a></li>
             </ul>
         </nav>
@@ -27,104 +27,114 @@
     <section class="hero">
         <h1>Enterprise E-Commerce Platform</h1>
         <p>Built with Spring Boot 3.4, Java 21, MySQL 8.0, and Vanilla ES6. Secure session authentication, transaction-safe inventory, and live analytics.</p>
-        <div id="session-banner" style="display: none; margin-top: 1rem; background: rgba(255,255,255,0.15); padding: 0.5rem 1rem; border-radius: 8px; display: inline-block;"></div>
+        <div id="session-banner" style="display: none; margin-top: 1rem; background: rgba(255,255,255,0.15); padding: 0.5rem 1.25rem; border-radius: 9999px;"></div>
     </section>
 
     <main class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <div>
-                <h2 style="font-size: 1.5rem; font-weight: 700;">Featured Catalog</h2>
-                <p style="color: var(--text-secondary); font-size: 0.95rem;">Real-time inventory persisted in MySQL</p>
+        <!-- Category Navigation Pills -->
+        <div class="category-bar-wrapper">
+            <div id="category-bar" class="category-bar">
+                <button class="category-pill active" data-category-id="">All Categories</button>
             </div>
-            <div id="catalog-meta" style="color: var(--text-muted); font-size: 0.9rem;"></div>
         </div>
 
-        <div id="products-grid" class="grid-products">
-            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
-                Loading live catalog...
+        <!-- Search and Filter Toolbar -->
+        <div class="toolbar-card">
+            <div class="toolbar-grid">
+                <!-- Search Input with Debounce -->
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="search-query">Search Products</label>
+                    <div class="search-wrapper">
+                        <input type="text" 
+                               id="search-query" 
+                               class="search-input" 
+                               placeholder="Search by title, description, or SKU..."
+                               autocomplete="off">
+                        <button id="search-clear" class="search-clear-btn" title="Clear search">&times;</button>
+                    </div>
+                </div>
+
+                <!-- Price Range Filter Form -->
+                <form id="price-filter-form" style="margin-bottom: 0;">
+                    <label class="form-label">Price Range ($)</label>
+                    <div class="price-inputs">
+                        <input type="number" id="filter-min-price" class="price-input" placeholder="Min" min="0" step="1">
+                        <span style="color: var(--text-muted);">&ndash;</span>
+                        <input type="number" id="filter-max-price" class="price-input" placeholder="Max" min="0" step="1">
+                        <button type="submit" class="btn btn-outline btn-sm" style="padding: 0.65rem 0.75rem;" title="Apply price filter">Go</button>
+                        <button type="button" id="btn-reset-price" class="btn btn-outline btn-sm" style="padding: 0.65rem 0.5rem;" title="Reset price filter">&times;</button>
+                    </div>
+                </form>
+
+                <!-- In-Stock Only Toggle -->
+                <div class="form-group stock-toggle-wrapper" style="margin-bottom: 0;">
+                    <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 0;">
+                        <input type="checkbox" id="filter-instock" class="toggle-checkbox">
+                        <span>In-Stock Only</span>
+                    </label>
+                </div>
+
+                <!-- Sort Dropdown -->
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="sort-by">Sort By</label>
+                    <select id="sort-by" class="form-control" style="padding: 0.65rem 0.75rem; font-size: 0.9rem;">
+                        <option value="createdAt:desc">Newest Arrivals</option>
+                        <option value="price:asc">Price: Low to High</option>
+                        <option value="price:desc">Price: High to Low</option>
+                        <option value="name:asc">Name: A to Z</option>
+                        <option value="name:desc">Name: Z to A</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Active Filter Chips Bar -->
+            <div id="active-filters-bar" class="active-filters" style="display: none;"></div>
+        </div>
+
+        <!-- Catalog Header Status -->
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem;">
+            <h2 style="font-size: 1.35rem; font-weight: 700;">Catalog Items</h2>
+            <div id="catalog-meta" style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;">
+                Loading items...
             </div>
         </div>
+
+        <!-- Products Grid Container -->
+        <div id="products-grid" class="grid-products"></div>
+
+        <!-- Pagination Controls -->
+        <div id="pagination-controls" class="pagination-container"></div>
     </main>
+
+    <!-- Quick View Modal -->
+    <div id="quickview-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-dialog">
+            <button id="modal-close" class="modal-close-btn" aria-label="Close dialog">&times;</button>
+            <div id="modal-product-content" class="modal-body">
+                <!-- Injected dynamically by catalog.js -->
+            </div>
+        </div>
+    </div>
 
     <footer class="footer">
         <p>&copy; 2026 ShopSphere E-Commerce &bull; Spring Boot 3.4 &bull; MySQL &bull; Vanilla JS</p>
     </footer>
 
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/catalog.js"></script>
     <script type="module">
         import { auth } from '/js/auth.js';
-        import { api } from '/js/api.js';
 
-        async function loadApp() {
-            // Check session
+        // Display user session in hero if logged in
+        document.addEventListener('DOMContentLoaded', async () => {
             const user = await auth.getCurrentUser();
             const banner = document.getElementById('session-banner');
             if (user && banner) {
                 const roleLabel = user.role === 'ROLE_ADMIN' ? 'Administrator' : 'Customer';
-                banner.innerHTML = `Active Session: <strong>${escapeHtml(user.fullName)}</strong> (${roleLabel})`;
+                banner.innerHTML = `Welcome back, <strong>${user.fullName}</strong> (${roleLabel})`;
                 banner.style.display = 'inline-block';
             }
-
-            // Load products
-            try {
-                const res = await api.get('/api/products?page=0&size=12');
-                const products = res.data.content;
-                const grid = document.getElementById('products-grid');
-                const meta = document.getElementById('catalog-meta');
-
-                if (meta) {
-                    meta.textContent = `Showing ${products.length} of ${res.data.totalElements} items`;
-                }
-
-                if (!products || products.length === 0) {
-                    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 3rem;">No products found in catalog.</div>';
-                    return;
-                }
-
-                grid.innerHTML = products.map(p => `
-                    <article class="product-card">
-                        <img src="${p.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600'}" 
-                             alt="${escapeHtml(p.name)}" 
-                             class="product-image" 
-                             loading="lazy"
-                             onerror="this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600'">
-                        <div class="product-body">
-                            <span class="product-category">${escapeHtml(p.categoryName || 'General')}</span>
-                            <h3 class="product-title">${escapeHtml(p.name)}</h3>
-                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; line-height: 1.4;">
-                                ${escapeHtml(p.description || '').substring(0, 80)}...
-                            </p>
-                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: auto;">
-                                <span class="product-price">$${Number(p.sellingPrice).toFixed(2)}</span>
-                                <span style="font-size: 0.8rem; font-weight: 600; color: ${p.inStock ? 'var(--success)' : 'var(--danger)'};">
-                                    ${p.inStock ? `${p.stockQuantity} in stock` : 'Out of stock'}
-                                </span>
-                            </div>
-                        </div>
-                    </article>
-                `).join('');
-            } catch (err) {
-                console.error('Failed to load products:', err);
-                const grid = document.getElementById('products-grid');
-                if (grid) {
-                    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--danger); padding: 3rem;">Failed to load catalog products.</div>';
-                }
-            }
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>"']/g, function(m) {
-                return {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#039;'
-                }[m];
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', loadApp);
+        });
     </script>
 </body>
 </html>

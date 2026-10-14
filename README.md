@@ -90,6 +90,7 @@ mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
 
 ### Web Interface & Documentation URLs
 - **Storefront Home**: [http://localhost:8080/index.html](http://localhost:8080/index.html)
+- **Product Details Page**: [http://localhost:8080/product.html?id=1](http://localhost:8080/product.html?id=1)
 - **Sign In Page**: [http://localhost:8080/login.html](http://localhost:8080/login.html)
 - **Registration Page**: [http://localhost:8080/register.html](http://localhost:8080/register.html)
 - **Interactive Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
@@ -97,13 +98,13 @@ mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
 
 ### Executing Automated Tests
 ```bash
-# Run all 59 unit, integration, validation, repository, and security tests
+# Run all 67 unit, integration, validation, repository, and security tests
 mvn clean test
 ```
 
 ---
 
-## 5. Security Architecture & Interview Concepts
+## 5. Security Architecture & Full-Stack Concepts for Interviews
 
 1. **Authentication vs Authorization**:
    - **Authentication (AuthN)**: Answering *"Who are you?"* by verifying credentials (email + BCrypt password hash).
@@ -116,3 +117,10 @@ mvn clean test
    - Generates an `XSRF-TOKEN` cookie that the frontend Vanilla JS client reads and attaches as the `X-XSRF-TOKEN` request header on mutating requests (`POST`, `PUT`, `DELETE`).
 4. **BCrypt Password Hashing**:
    - One-way adaptive cryptographic hashing with configurable work factor (12 salt rounds), resistant to rainbow-table and GPU brute-force attacks.
+5. **Dynamic JPA Specifications & Database-Level Pagination**:
+   - Rather than loading all rows into Java memory and filtering with streams, `ProductSpecification` builds dynamic SQL `WHERE` clauses at runtime using JPA `CriteriaBuilder`.
+   - Uses SQL `LEFT JOIN` on `category` and `parent` so filtering by a root category automatically retrieves items belonging to nested subcategories without omitting records where parent is null.
+   - Database-level pagination (`PageRequest.of(page, size, sort)`) translates to MySQL `LIMIT ? OFFSET ?` queries, maintaining $O(1)$ memory consumption on the server.
+6. **Frontend State & URL Synchronization**:
+   - The Vanilla JS catalog manager (`catalog.js`) maintains state across search queries, category selections, price ranges, stock flags, sorting, and pagination.
+   - Synchronizes filter state via `window.history.replaceState()`, enabling bookmarking, browser back/forward navigation, and smooth reloads without page-reload flashes.

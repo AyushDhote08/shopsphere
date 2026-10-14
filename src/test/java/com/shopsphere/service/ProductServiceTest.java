@@ -158,4 +158,34 @@ class ProductServiceTest {
         assertThat(response.getContent().get(0).getName()).isEqualTo("Wireless Earbuds");
         assertThat(response.getTotalElements()).isEqualTo(1);
     }
+
+    @Test
+    @DisplayName("getProducts: Should throw BadRequestException when minPrice is negative")
+    void shouldThrowWhenMinPriceIsNegative() {
+        assertThatThrownBy(() -> productService.getProducts(
+                null, null, new BigDecimal("-1.00"), null, false, 0, 10, "createdAt", "DESC"
+        ))
+                .isInstanceOf(com.shopsphere.exception.BadRequestException.class)
+                .hasMessageContaining("Minimum price cannot be negative");
+    }
+
+    @Test
+    @DisplayName("getProducts: Should throw BadRequestException when maxPrice is negative")
+    void shouldThrowWhenMaxPriceIsNegative() {
+        assertThatThrownBy(() -> productService.getProducts(
+                null, null, null, new BigDecimal("-10.00"), false, 0, 10, "createdAt", "DESC"
+        ))
+                .isInstanceOf(com.shopsphere.exception.BadRequestException.class)
+                .hasMessageContaining("Maximum price cannot be negative");
+    }
+
+    @Test
+    @DisplayName("getProducts: Should throw BadRequestException when minPrice exceeds maxPrice")
+    void shouldThrowWhenMinPriceExceedsMaxPrice() {
+        assertThatThrownBy(() -> productService.getProducts(
+                null, null, new BigDecimal("200.00"), new BigDecimal("50.00"), false, 0, 10, "createdAt", "DESC"
+        ))
+                .isInstanceOf(com.shopsphere.exception.BadRequestException.class)
+                .hasMessageContaining("Minimum price cannot be greater than maximum price");
+    }
 }

@@ -1,6 +1,9 @@
 package com.shopsphere.repository.specification;
 
+import com.shopsphere.entity.Category;
 import com.shopsphere.entity.Product;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -35,9 +38,14 @@ public class ProductSpecification {
                 predicates.add(cb.or(nameLike, descLike, skuLike));
             }
 
-            // Category filter
+            // Category filter (matches direct category or subcategory under parent category)
             if (categoryId != null) {
-                predicates.add(cb.equal(root.get("category").get("id"), categoryId));
+                Join<Product, Category> categoryJoin = root.join("category", JoinType.LEFT);
+                Join<Category, Category> parentJoin = categoryJoin.join("parent", JoinType.LEFT);
+                predicates.add(cb.or(
+                        cb.equal(categoryJoin.get("id"), categoryId),
+                        cb.equal(parentJoin.get("id"), categoryId)
+                ));
             }
 
             // Price range filter
