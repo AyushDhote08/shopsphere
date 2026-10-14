@@ -5,9 +5,9 @@
 | Phase | Description | Status | Completion Target |
 |---|---|---|---|
 | **Phase 0** | Requirements, Environment, Architecture, Git Setup, Project Baseline | **Completed** | Baseline verified & tested |
-| **Phase 1** | Database Migrations & Backend Foundation | Planned | Flyway schema + JPA setup |
+| **Phase 1** | Database Migrations & Backend Foundation (Catalog, Categories, DTOs, APIs) | **Completed** | 36/36 tests passing & MySQL verified |
 | **Phase 2** | Authentication & Authorization | Planned | Spring Security + Session Auth |
-| **Phase 3** | Product Catalog & Categories | Planned | CRUD + Filtering + Pagination |
+| **Phase 3** | Product Catalog & Categories (Frontend UI & Storefront Integration) | Planned | CRUD + Filtering + Pagination UI |
 | **Phase 4** | Frontend Storefront & API Integration | Planned | HTML/CSS/Vanilla JS UI |
 | **Phase 5** | Cart & Checkout Logic | Planned | Persistent Cart + Order Prep |
 | **Phase 6** | Orders, Simulated Payments & Concurrency-Safe Inventory | Planned | ACID Order Processing |
@@ -20,28 +20,35 @@
 
 ## 2. Current Status Summary
 
-- **Current Active Phase**: Transitioning to **Phase 1** (Database Migrations & Backend Foundation).
+- **Current Active Phase**: Transitioning to **Phase 2** (Authentication & Authorization).
 - **Completed Features**:
-  - Initial workspace inspection: Java 24 (`jdk-24`), Maven 3.9.6, Git 2.51, and running local MySQL 8.0 server verified on Windows.
-  - Authored comprehensive architectural and engineering documentation:
-    - `AGENTS.md`: Coding agent principles, rules, and interview goals.
-    - `docs/requirements.md`: Functional and non-functional requirements checklist.
-    - `docs/architecture.md`: System design, sequence diagram, package structure.
-    - `docs/database-design.md`: ER diagram, data dictionary, indexing rules.
-    - `docs/api-reference.md`: REST API contract specification.
-    - `docs/test-plan.md`: Unit, integration, negative, and concurrency test plans.
-    - `docs/deployment.md`: Containerization, hosting evaluation, env reference.
-    - `docs/implementation-status.md`: Phased tracker.
-  - Initialized Git repository and created comprehensive `.gitignore`.
-  - Configured Maven `pom.xml` with Spring Boot 3.4.3, Java 21 LTS release target, Spring Data JPA, MySQL Connector, Flyway, Validation, Security, Springdoc OpenAPI, and Test starter.
-  - Configured multi-profile YAML environment (`application.yml`, `application-dev.yml`, `application-prod.yml`, `application-test.yml`).
-  - Implemented main application class `ShopSphereApplication.java`.
-  - Executed automated baseline test verifying Spring Boot ApplicationContext, HikariCP, and Hibernate initialization with zero failures.
+  - **Phase 0 Setup**:
+    - Environment inspected (Java 24 runtime, Maven 3.9.6, MySQL 8.0, Git 2.51).
+    - Authored master documentation: `AGENTS.md`, `docs/requirements.md`, `docs/architecture.md`, `docs/database-design.md`, `docs/api-reference.md`, `docs/test-plan.md`, `docs/deployment.md`, `docs/implementation-status.md`.
+    - Initialized Git repository and baseline Spring Boot 3.4.3 project.
+  - **Phase 1 Backend Foundation**:
+    - Configured Flyway versioned migrations: `V1__create_categories_and_products.sql` and `V2__seed_categories_and_products.sql`.
+    - Created JPA persistence entities `Category` and `Product` with `@PrePersist`/`@PreUpdate`, lifecycle callbacks, and `BigDecimal` monetary precision.
+    - Implemented `CategoryRepository` and `ProductRepository` extending `JpaRepository` and `JpaSpecificationExecutor<Product>`.
+    - Built comprehensive DTO layer (`CategoryRequestDTO`, `CategoryResponseDTO`, `ProductRequestDTO`, `ProductResponseDTO`, `ApiResponse<T>`, `PageResponse<T>`).
+    - Implemented business services `CategoryService` and `ProductService` with transactional boundaries, auto slug generation, safe pagination, and multi-field sorting.
+    - Implemented REST controllers `CategoryController` and `ProductController` with OpenAPI annotations.
+    - Added centralized error handling via `@RestControllerAdvice` (`GlobalExceptionHandler`) handling 400, 404, 405, 409, and 500 errors.
+    - Seeded sample catalog in MySQL `shopsphere_db` (12 realistic products across 5 categories).
+    - Live tested endpoints on port 8080 (`/api/products`, `/api/categories/hierarchy`, `/v3/api-docs`).
 - **Known Defects**: None.
 - **Tests Executed & Actual Results**:
-  - `ShopSphereApplicationTests.contextLoads`: **PASS** (1 test run, 0 failures, 0 errors, build success).
+  - `mvn clean test`: **BUILD SUCCESS**
+  - Total Tests Run: **36**, Failures: **0**, Errors: **0**, Skipped: **0**
+    - `ShopSphereApplicationTests`: 1 passed (Context Loads)
+    - `CategoryRepositoryTest`: 5 passed (JPA persistence & query methods)
+    - `ProductRepositoryTest`: 5 passed (JPA persistence, SKU search, low stock queries)
+    - `CategoryServiceTest`: 5 passed (Mockito unit tests)
+    - `ProductServiceTest`: 5 passed (Mockito unit tests)
+    - `CategoryControllerTest`: 7 passed (MockMvc REST API & validation tests)
+    - `ProductControllerTest`: 8 passed (MockMvc REST API, pagination, & validation tests)
 - **Outstanding Tasks**:
-  - Present Phase 0 results and the 8 core items to user.
-  - Await user confirmation before beginning Phase 1 (Flyway migrations & domain entities).
+  - Await user review of Phase 1 deliverables.
+  - Begin Phase 2: User registration, BCrypt password hashing, Spring Security session authentication, and role authorization (`ROLE_CUSTOMER`, `ROLE_ADMIN`).
 - **Next Recommended Action**:
-  - Implement Phase 1: Create Flyway `V1__init_schema.sql` and `V2__seed_demo_data.sql`, map core JPA entities, and test schema migration against local MySQL.
+  - Implement Phase 2: Create users, roles, and addresses migration schema, User entity, CustomUserDetailsService, session-based auth controllers, and security tests.
