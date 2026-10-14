@@ -49,7 +49,6 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public CartResponseDTO getCart(Long userId) {
         Cart cart = getOrCreateCartEntity(userId);
         return mapToDTO(cart);
