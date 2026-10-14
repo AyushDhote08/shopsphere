@@ -32,4 +32,12 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     @Query("SELECT COUNT(p) FROM Product p WHERE p.isActive = true AND p.stockQuantity <= p.lowStockThreshold")
     long countLowStockProducts();
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Product p WHERE p.id = :id")
+    Optional<Product> findByIdWithPessimisticLock(@Param("id") Long id);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Product p WHERE p.id IN :ids")
+    List<Product> findAllByIdInWithPessimisticLock(@Param("ids") List<Long> ids);
 }

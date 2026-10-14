@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders — ShopSphere</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header class="navbar">
+        <a href="/index.html" class="brand-logo">
+            <span>ShopSphere</span>
+            <span class="brand-badge">Full-Stack</span>
+        </a>
+        <nav>
+            <ul class="nav-links">
+                <li><a href="/index.html" class="nav-link">Catalog</a></li>
+                <li><a href="/orders.html" class="nav-link" style="color: var(--primary); font-weight: 700;">My Orders</a></li>
+                <li><a href="/cart.html" class="nav-link">Cart</a></li>
+                <li><a href="/swagger-ui.html" target="_blank" class="nav-link">API Docs</a></li>
+            </ul>
+        </nav>
+        <div id="navbar-auth" class="nav-auth">
+            <a href="/login.html" class="btn btn-outline btn-sm">Sign In</a>
+            <a href="/register.html" class="btn btn-primary btn-sm">Register</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Breadcrumbs -->
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/index.html">Home</a>
+            <span class="breadcrumb-separator">/</span>
+            <span style="color: var(--text-primary); font-weight: 600;">My Orders History</span>
+        </nav>
+
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.5rem;">
+            <div>
+                <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text-primary);">Order History</h1>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.25rem;">
+                    View your past purchases, shipment tracking status, and immutable payment records.
+                </p>
+            </div>
+            <a href="/index.html" class="btn btn-outline btn-sm">&larr; Shop More</a>
+        </div>
+
+        <!-- Orders Table / List Container -->
+        <div id="orders-container">
+            <div class="empty-state" style="margin-top: 2rem; background: white;">
+                <div class="skeleton" style="height: 30px; width: 40%; margin: 0 auto 1.5rem;"></div>
+                <div class="skeleton" style="height: 80px; width: 100%; margin-bottom: 0.75rem;"></div>
+                <div class="skeleton" style="height: 80px; width: 100%; margin-bottom: 0.75rem;"></div>
+                <div class="skeleton" style="height: 80px; width: 100%;"></div>
+            </div>
+        </div>
+
+        <!-- Pagination Bar -->
+        <div id="orders-pagination" class="pagination-container" style="display: none; margin-top: 2rem;"></div>
+
+        <!-- Order Detail Modal -->
+        <div id="order-modal" class="modal-backdrop" style="display: none;">
+            <div class="modal-dialog" style="max-width: 700px; width: 90%;">
+                <div class="modal-header">
+                    <h3 id="modal-order-title" style="font-size: 1.25rem; font-weight: 700;">Order Details</h3>
+                    <button id="btn-close-modal" class="modal-close-btn">&times;</button>
+                </div>
+                <div id="modal-order-content" class="modal-body" style="display: block; padding: 1.5rem; max-height: 70vh; overflow-y: auto;">
+                    <!-- Injected dynamically -->
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); background: #f8fafc;">
+                    <a id="modal-view-receipt-link" href="#" class="btn btn-outline btn-sm" target="_blank">Full Receipt Page &nearr;</a>
+                    <button id="btn-close-modal-footer" class="btn btn-primary btn-sm">Close</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 ShopSphere E-Commerce &bull; Spring Boot 3.4 &bull; MySQL &bull; Vanilla JS</p>
+    </footer>
+
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/orders.js"></script>
+</body>
+</html>

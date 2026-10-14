@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart — ShopSphere</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header class="navbar">
+        <a href="/index.html" class="brand-logo">
+            <span>ShopSphere</span>
+            <span class="brand-badge">Full-Stack</span>
+        </a>
+        <nav>
+            <ul class="nav-links">
+                <li><a href="/index.html" class="nav-link">Catalog</a></li>
+                <li><a href="/swagger-ui.html" target="_blank" class="nav-link">API Docs</a></li>
+            </ul>
+        </nav>
+        <div id="navbar-auth" class="nav-auth">
+            <a href="/login.html" class="btn btn-outline btn-sm">Sign In</a>
+            <a href="/register.html" class="btn btn-primary btn-sm">Register</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Breadcrumbs -->
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/index.html">Home</a>
+            <span class="breadcrumb-separator">/</span>
+            <span style="color: var(--text-primary); font-weight: 600;">Shopping Cart</span>
+        </nav>
+
+        <!-- Cart Main Container -->
+        <div id="cart-container">
+            <div class="empty-state" style="margin-top: 2rem; background: white;">
+                <div class="skeleton" style="height: 30px; width: 40%; margin: 0 auto 1.5rem;"></div>
+                <div class="skeleton" style="height: 120px; width: 100%; margin-bottom: 1rem;"></div>
+                <div class="skeleton" style="height: 120px; width: 100%;"></div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 ShopSphere E-Commerce &bull; Spring Boot 3.4 &bull; MySQL &bull; Vanilla JS</p>
+    </footer>
+
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/cart.js"></script>
+</body>
+</html>

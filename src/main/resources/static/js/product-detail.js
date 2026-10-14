@@ -207,12 +207,51 @@ class ProductDetailManager {
         }
 
         if (addCartBtn && toast) {
-            addCartBtn.addEventListener('click', () => {
-                toast.style.display = 'block';
-                toast.innerHTML = `&#10003; <strong>${this.quantity} &times; ${escapeHtml(this.product.name)}</strong> selected! Full persistent shopping cart & checkout flow is scheduled for Phase 4.`;
-                setTimeout(() => {
+            addCartBtn.addEventListener('click', async () => {
+                addCartBtn.disabled = true;
+                const originalText = addCartBtn.textContent;
+                addCartBtn.textContent = 'Adding to cart...';
+
+                try {
+                    await api.post('/api/cart/items', {
+                        productId: this.product.id,
+                        quantity: this.quantity
+                    });
+
+                    toast.style.display = 'block';
+                    toast.style.background = 'var(--success-light)';
+                    toast.style.color = 'var(--success)';
+                    toast.style.borderColor = '#86efac';
+                    toast.innerHTML = `
+                        &#10003; <strong>${this.quantity} &times; ${escapeHtml(this.product.name)}</strong> added to your cart! 
+                        <a href="/cart.html" style="font-weight: 700; color: var(--primary); text-decoration: underline; margin-left: 0.5rem;">
+                            View Cart &rarr;
+                        </a>
+                    `;
+
+                    // Update navbar badge count
+                    const badge = document.getElementById('nav-cart-badge');
+                    if (badge) {
+                        const currentCount = parseInt(badge.textContent, 10) || 0;
+                        badge.textContent = currentCount + this.quantity;
+                        badge.style.display = 'inline-flex';
+                    }
+                } catch (err) {
+                    if (err.status === 401) {
+                        window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+                        return;
+                    }
+
+                    toast.style.display = 'block';
+                    toast.style.background = 'var(--danger-light)';
+                    toast.style.color = 'var(--danger)';
+                    toast.style.borderColor = '#fca5a5';
+                    toast.innerHTML = `&#9888; <strong>Failed to add item:</strong> ${escapeHtml(err.message || 'Error communicating with cart')}`;
+                } finally {
+                    addCartBtn.disabled = false;
+                    addCartBtn.textContent = originalText;
                     toast.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }, 50);
+                }
             });
         }
     }
