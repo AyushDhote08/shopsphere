@@ -1,6 +1,6 @@
 # ShopSphere — Full-Stack E-commerce & Inventory Management Platform
 
-ShopSphere is an enterprise-grade full-stack e-commerce and inventory management application built with **Spring Boot 3.4**, **Java 21/24**, **Spring Data JPA / Hibernate**, **MySQL 8.0**, and **Flyway Database Migrations**, designed with strict layered architecture, zero client-side pricing trust, concurrency safety, and professional API standards.
+ShopSphere is an enterprise-grade full-stack e-commerce and inventory management application built with **Spring Boot 3.4**, **Java 21/24**, **Spring Security**, **Spring Data JPA / Hibernate**, **MySQL 8.0**, **Flyway Migrations**, and **Vanilla ES6 JavaScript**, designed with strict layered architecture, zero client-side pricing trust, session-based security, and professional REST API standards.
 
 ---
 
@@ -8,11 +8,12 @@ ShopSphere is an enterprise-grade full-stack e-commerce and inventory management
 
 ```mermaid
 flowchart TD
-    Client["Client / Frontend / Swagger UI"] -->|HTTP / JSON REST API| Controller["Controller Layer (@RestController)"]
+    Client["Client Browser (Vanilla JS / HTML5)"] -->|HTTP Cookies & JSON| SecFilter["Spring Security Filter Chain\n(CsrfFilter, SessionAuth, RoleGuards)"]
+    SecFilter -->|Valid Session & CSRF| Controller["Controller Layer (@RestController)"]
     Controller -->|DTOs & Validation| Service["Service Layer (@Service, @Transactional)"]
     Service -->|Entities & Specifications| Repository["Repository Layer (Spring Data JPA)"]
     Repository -->|ACID SQL Queries| Database[(MySQL 8.0 Engine / InnoDB)]
-    Flyway["Flyway Database Migration Engine"] -.->|Applies V1, V2 SQL| Database
+    Flyway["Flyway Migration Engine"] -.->|Applies V1, V2, V3 Migrations| Database
 ```
 
 ---
@@ -21,36 +22,46 @@ flowchart TD
 
 - **Backend**: Java 21 LTS (`--release 21`), Spring Boot 3.4.3, Spring Web, Spring Security, Spring Data JPA, Hibernate 6.6, Jakarta Bean Validation.
 - **Database**: MySQL 8.0 (InnoDB engine), Flyway migrations.
-- **Testing**: JUnit 5, Mockito, Spring Boot Test, MockMvc, AssertJ, H2 in-memory test database.
+- **Frontend**: HTML5, CSS3 Modern Design System, Vanilla ES6 JavaScript (zero SPA frameworks).
+- **Security**: Spring Security session-based auth, BCrypt password hashing (strength 12), Cookie-based CSRF protection (`XSRF-TOKEN`), Role-based access control (`ROLE_CUSTOMER`, `ROLE_ADMIN`).
+- **Testing**: JUnit 5, Mockito, Spring Boot Test, MockMvc, Spring Security Test, AssertJ, H2 in-memory test database.
 - **API Documentation**: Springdoc OpenAPI 3.0 / Swagger UI (`/swagger-ui.html`).
 - **Build Tool**: Maven 3.9+.
 
 ---
 
-## 3. Implemented REST APIs (Phase 1 Foundation)
+## 3. Implemented REST APIs
+
+### Authentication & Current User (`/api/auth`)
+| Method | Endpoint | Description | Role / Auth | Status Code |
+|---|---|---|---|---|
+| `POST` | `/api/auth/register` | Register customer account (BCrypt hash, default `ROLE_CUSTOMER`) | Anonymous | `201 Created` / `400` / `409` |
+| `POST` | `/api/auth/login` | Authenticate credentials and establish HTTP session cookie | Anonymous | `200 OK` / `401 Unauthorized` |
+| `POST` | `/api/auth/logout` | Invalidate session and clear SecurityContext | Authenticated | `200 OK` |
+| `GET` | `/api/auth/me` | Retrieve profile of authenticated user | Authenticated | `200 OK` / `401 Unauthorized` |
+| `GET` | `/api/auth/csrf` | Initialize and provide CSRF token | Anonymous | `200 OK` |
 
 ### Product Catalog APIs (`/api/products`)
-| Method | Endpoint | Description | Status Code |
-|---|---|---|---|
-| `GET` | `/api/products` | Paginated product browsing with search query, category filter, price bounds, in-stock filter, and multi-field sorting | `200 OK` |
-| `GET` | `/api/products/{id}` | Get product by numeric ID | `200 OK` / `404 Not Found` |
-| `GET` | `/api/products/slug/{slug}` | Get product by SEO URL slug | `200 OK` / `404 Not Found` |
-| `GET` | `/api/products/sku/{sku}` | Get product by unique SKU | `200 OK` / `404 Not Found` |
-| `GET` | `/api/products/low-stock` | Get products where stock $\le$ threshold | `200 OK` |
-| `POST` | `/api/products` | Create product with validation (unique SKU/slug, positive prices) | `201 Created` / `400` / `409` |
-| `PUT` | `/api/products/{id}` | Update product details | `200 OK` / `400` / `404` / `409` |
-| `DELETE` | `/api/products/{id}` | Soft-deactivate product (`isActive = false`) to preserve order history | `204 No Content` / `404` |
+| Method | Endpoint | Description | Role / Auth | Status Code |
+|---|---|---|---|---|
+| `GET` | `/api/products` | Paginated product browsing with query, category, price, and stock filters | Anonymous | `200 OK` |
+| `GET` | `/api/products/{id}` | Get product by numeric ID | Anonymous | `200 OK` / `404` |
+| `GET` | `/api/products/slug/{slug}` | Get product by SEO URL slug | Anonymous | `200 OK` / `404` |
+| `GET` | `/api/products/sku/{sku}` | Get product by unique SKU | Anonymous | `200 OK` / `404` |
+| `GET` | `/api/products/low-stock` | Get products where stock $\le$ threshold | Anonymous | `200 OK` |
+| `POST` | `/api/products` | Create product (validates unique SKU/slug, positive prices) | `ROLE_ADMIN` | `201 Created` / `400` / `403` / `409` |
+| `PUT` | `/api/products/{id}` | Update product details | `ROLE_ADMIN` | `200 OK` / `400` / `403` / `404` / `409` |
+| `DELETE` | `/api/products/{id}` | Soft-deactivate product (`isActive = false`) | `ROLE_ADMIN` | `204 No Content` / `403` / `404` |
 
 ### Category APIs (`/api/categories`)
-| Method | Endpoint | Description | Status Code |
-|---|---|---|---|
-| `GET` | `/api/categories` | Flat list of active categories | `200 OK` |
-| `GET` | `/api/categories/hierarchy` | Root categories with nested active subcategories | `200 OK` |
-| `GET` | `/api/categories/{id}` | Get category by ID | `200 OK` / `404 Not Found` |
-| `GET` | `/api/categories/slug/{slug}` | Get category by URL slug | `200 OK` / `404 Not Found` |
-| `POST` | `/api/categories` | Create category (auto-generates slug, checks uniqueness) | `201 Created` / `400` / `409` |
-| `PUT` | `/api/categories/{id}` | Update category | `200 OK` / `400` / `404` / `409` |
-| `DELETE` | `/api/categories/{id}` | Soft-deactivate category | `204 No Content` / `404` |
+| Method | Endpoint | Description | Role / Auth | Status Code |
+|---|---|---|---|---|
+| `GET` | `/api/categories` | Flat list of active categories | Anonymous | `200 OK` |
+| `GET` | `/api/categories/hierarchy` | Root categories with nested subcategories | Anonymous | `200 OK` |
+| `GET` | `/api/categories/{id}` | Get category by ID | Anonymous | `200 OK` / `404` |
+| `POST` | `/api/categories` | Create category (auto slug, uniqueness checks) | `ROLE_ADMIN` | `201 Created` / `400` / `403` / `409` |
+| `PUT` | `/api/categories/{id}` | Update category | `ROLE_ADMIN` | `200 OK` / `400` / `403` / `404` / `409` |
+| `DELETE` | `/api/categories/{id}` | Soft-deactivate category | `ROLE_ADMIN` | `204 No Content` / `403` / `404` |
 
 ---
 
@@ -62,7 +73,7 @@ flowchart TD
 - MySQL 8.0 Server running on port 3306
 
 ### Database Setup
-Flyway automatically creates the schema and seed data when starting with the `dev` profile. Create the database:
+Flyway automatically creates the schema and seed data when starting with the `dev` profile:
 ```sql
 CREATE DATABASE IF NOT EXISTS shopsphere_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
@@ -73,21 +84,35 @@ CREATE DATABASE IF NOT EXISTS shopsphere_db CHARACTER SET utf8mb4 COLLATE utf8mb
 mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
-### Accessing Interactive API Documentation
-- **Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+### Development Demo Accounts
+- **Administrator**: `admin@shopsphere.com` / `Admin@12345` (Role: `ROLE_ADMIN`)
+- **Customer Registration**: Visit `http://localhost:8080/register.html` to register a new customer account (Role: `ROLE_CUSTOMER`).
+
+### Web Interface & Documentation URLs
+- **Storefront Home**: [http://localhost:8080/index.html](http://localhost:8080/index.html)
+- **Sign In Page**: [http://localhost:8080/login.html](http://localhost:8080/login.html)
+- **Registration Page**: [http://localhost:8080/register.html](http://localhost:8080/register.html)
+- **Interactive Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 - **OpenAPI 3.0 JSON**: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
 
 ### Executing Automated Tests
 ```bash
-# Run full test suite (36 unit, integration, validation, and repository tests)
+# Run all 59 unit, integration, validation, repository, and security tests
 mvn clean test
 ```
 
 ---
 
-## 5. Architectural Highlights & Interview Insights
+## 5. Security Architecture & Interview Concepts
 
-1. **DTO Isolation**: Entities never cross controller boundaries. DTOs encapsulate request contracts and response views, shielding persistence logic and preventing over-posting vulnerabilities.
-2. **Monetary Precision**: All monetary values use Java `BigDecimal` and MySQL `DECIMAL(12,2)`. Binary floating-point types (`double`/`float`) are prohibited to eliminate rounding drift.
-3. **Deterministic Migrations**: Flyway provides version-controlled SQL scripts (`V1__...`, `V2__...`). Schema changes are reproducible across all environments, eliminating the risks of `hibernate.ddl-auto=update`.
-4. **Soft Deactivation**: Products and categories are deactivated (`isActive = false`) rather than physically deleted, protecting historical order and inventory audit records from cascading foreign key deletion.
+1. **Authentication vs Authorization**:
+   - **Authentication (AuthN)**: Answering *"Who are you?"* by verifying credentials (email + BCrypt password hash).
+   - **Authorization (AuthZ)**: Answering *"What are you allowed to do?"* by checking roles (`ROLE_CUSTOMER` vs `ROLE_ADMIN`) on requested endpoints.
+2. **Session-Based Authentication for Monoliths**:
+   - Uses standard, browser-native `JSESSIONID` cookies with `HttpOnly`, `SameSite=Lax`, and session fixation protection (`migrateSession()`).
+   - Immunizes the frontend from token storage attacks (unlike storing JWTs in `localStorage` which is vulnerable to XSS).
+3. **Cookie-Based CSRF Protection**:
+   - Configured via `CookieCsrfTokenRepository.withHttpOnlyFalse()`.
+   - Generates an `XSRF-TOKEN` cookie that the frontend Vanilla JS client reads and attaches as the `X-XSRF-TOKEN` request header on mutating requests (`POST`, `PUT`, `DELETE`).
+4. **BCrypt Password Hashing**:
+   - One-way adaptive cryptographic hashing with configurable work factor (12 salt rounds), resistant to rainbow-table and GPU brute-force attacks.

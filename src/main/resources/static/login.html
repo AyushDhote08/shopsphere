@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — ShopSphere</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header class="navbar">
+        <a href="/index.html" class="brand-logo">
+            <span>ShopSphere</span>
+            <span class="brand-badge">Full-Stack</span>
+        </a>
+        <div id="navbar-auth" class="nav-auth">
+            <a href="/register.html" class="btn btn-outline btn-sm">Create Account</a>
+        </div>
+    </header>
+
+    <main class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Welcome Back</h1>
+                <p>Sign in to your ShopSphere account</p>
+            </div>
+
+            <div id="alert-box" class="alert" role="alert"></div>
+
+            <form id="login-form" novalidate>
+                <div class="form-group">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input type="email" id="email" class="form-control" required placeholder="name@example.com" autocomplete="username">
+                    <div id="email-error" class="field-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" id="password" class="form-control" required placeholder="••••••••" autocomplete="current-password">
+                    <div id="password-error" class="field-error"></div>
+                </div>
+
+                <button type="submit" id="btn-submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                    <span>Sign In</span>
+                </button>
+            </form>
+
+            <details class="demo-credentials">
+                <summary>Development Demo Accounts</summary>
+                <div style="margin-top: 0.5rem; line-height: 1.5;">
+                    <p><strong>Admin Account:</strong></p>
+                    <code>admin@shopsphere.com</code> / <code>Admin@12345</code>
+                    <p style="margin-top: 0.5rem;">Or register a new Customer account below.</p>
+                </div>
+            </details>
+
+            <p style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-secondary);">
+                Don't have an account yet? <a href="/register.html" style="color: var(--primary); font-weight: 600;">Register here</a>
+            </p>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 ShopSphere E-Commerce &bull; Spring Boot 3.4 &bull; MySQL &bull; Vanilla JS</p>
+    </footer>
+
+    <script type="module">
+        import { auth } from '/js/auth.js';
+
+        const form = document.getElementById('login-form');
+        const alertBox = document.getElementById('alert-box');
+        const submitBtn = document.getElementById('btn-submit');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            alertBox.style.display = 'none';
+            alertBox.className = 'alert';
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showAlert('Please provide both email and password', 'danger');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>Signing in...</span>';
+
+            try {
+                const res = await auth.login(email, password);
+                showAlert('Login successful! Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/index.html';
+                }, 800);
+            } catch (err) {
+                showAlert(err.message || 'Invalid email or password', 'danger');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>Sign In</span>';
+            }
+        });
+
+        function showAlert(msg, type) {
+            alertBox.textContent = msg;
+            alertBox.className = `alert alert-${type}`;
+            alertBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

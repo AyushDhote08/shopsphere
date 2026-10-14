@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account — ShopSphere</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header class="navbar">
+        <a href="/index.html" class="brand-logo">
+            <span>ShopSphere</span>
+            <span class="brand-badge">Full-Stack</span>
+        </a>
+        <div id="navbar-auth" class="nav-auth">
+            <a href="/login.html" class="btn btn-outline btn-sm">Already have an account?</a>
+        </div>
+    </header>
+
+    <main class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Create an Account</h1>
+                <p>Join ShopSphere for seamless shopping and order tracking</p>
+            </div>
+
+            <div id="alert-box" class="alert" role="alert"></div>
+
+            <form id="register-form" novalidate>
+                <div class="form-group">
+                    <label for="fullName" class="form-label">Full Name</label>
+                    <input type="text" id="fullName" class="form-control" required placeholder="Jane Doe" autocomplete="name">
+                    <div id="fullName-error" class="field-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input type="email" id="email" class="form-control" required placeholder="jane.doe@example.com" autocomplete="email">
+                    <div id="email-error" class="field-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" id="password" class="form-control" required placeholder="Minimum 8 characters" autocomplete="new-password">
+                    <div id="password-error" class="field-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone" class="form-label">Phone Number (Optional)</label>
+                    <input type="tel" id="phone" class="form-control" placeholder="+1-555-0199" autocomplete="tel">
+                    <div id="phone-error" class="field-error"></div>
+                </div>
+
+                <button type="submit" id="btn-submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                    <span>Create Customer Account</span>
+                </button>
+            </form>
+
+            <p style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-secondary);">
+                Already registered? <a href="/login.html" style="color: var(--primary); font-weight: 600;">Sign in here</a>
+            </p>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 ShopSphere E-Commerce &bull; Spring Boot 3.4 &bull; MySQL &bull; Vanilla JS</p>
+    </footer>
+
+    <script type="module">
+        import { auth } from '/js/auth.js';
+
+        const form = document.getElementById('register-form');
+        const alertBox = document.getElementById('alert-box');
+        const submitBtn = document.getElementById('btn-submit');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearErrors();
+
+            const fullName = document.getElementById('fullName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const phone = document.getElementById('phone').value.trim();
+
+            let hasError = false;
+            if (!fullName) {
+                showFieldError('fullName', 'Full name is required');
+                hasError = true;
+            }
+            if (!email) {
+                showFieldError('email', 'Email address is required');
+                hasError = true;
+            }
+            if (!password || password.length < 8) {
+                showFieldError('password', 'Password must be at least 8 characters long');
+                hasError = true;
+            }
+
+            if (hasError) return;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>Creating Account...</span>';
+
+            try {
+                const res = await auth.register(fullName, email, password, phone);
+                showAlert('Account created successfully! Redirecting to sign in...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/login.html';
+                }, 1200);
+            } catch (err) {
+                if (err.data && err.data.fieldErrors && Array.isArray(err.data.fieldErrors)) {
+                    err.data.fieldErrors.forEach(fe => showFieldError(fe.field, fe.message));
+                    showAlert('Please correct the highlighted fields.', 'danger');
+                } else {
+                    showAlert(err.message || 'Registration failed. Please check your input.', 'danger');
+                }
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>Create Customer Account</span>';
+            }
+        });
+
+        function showFieldError(field, msg) {
+            const input = document.getElementById(field);
+            const errorDiv = document.getElementById(`${field}-error`);
+            if (input) input.classList.add('is-invalid');
+            if (errorDiv) errorDiv.textContent = msg;
+        }
+
+        function clearErrors() {
+            alertBox.style.display = 'none';
+            alertBox.className = 'alert';
+            document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+        }
+
+        function showAlert(msg, type) {
+            alertBox.textContent = msg;
+            alertBox.className = `alert alert-${type}`;
+            alertBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

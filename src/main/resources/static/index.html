@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopSphere — E-Commerce & Inventory Management</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header class="navbar">
+        <a href="/index.html" class="brand-logo">
+            <span>ShopSphere</span>
+            <span class="brand-badge">Full-Stack</span>
+        </a>
+        <nav>
+            <ul class="nav-links">
+                <li><a href="/index.html" class="nav-link">Catalog</a></li>
+                <li><a href="/swagger-ui.html" target="_blank" class="nav-link">API Docs</a></li>
+            </ul>
+        </nav>
+        <div id="navbar-auth" class="nav-auth">
+            <a href="/login.html" class="btn btn-outline btn-sm">Sign In</a>
+            <a href="/register.html" class="btn btn-primary btn-sm">Register</a>
+        </div>
+    </header>
+
+    <section class="hero">
+        <h1>Enterprise E-Commerce Platform</h1>
+        <p>Built with Spring Boot 3.4, Java 21, MySQL 8.0, and Vanilla ES6. Secure session authentication, transaction-safe inventory, and live analytics.</p>
+        <div id="session-banner" style="display: none; margin-top: 1rem; background: rgba(255,255,255,0.15); padding: 0.5rem 1rem; border-radius: 8px; display: inline-block;"></div>
+    </section>
+
+    <main class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div>
+                <h2 style="font-size: 1.5rem; font-weight: 700;">Featured Catalog</h2>
+                <p style="color: var(--text-secondary); font-size: 0.95rem;">Real-time inventory persisted in MySQL</p>
+            </div>
+            <div id="catalog-meta" style="color: var(--text-muted); font-size: 0.9rem;"></div>
+        </div>
+
+        <div id="products-grid" class="grid-products">
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
+                Loading live catalog...
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 ShopSphere E-Commerce &bull; Spring Boot 3.4 &bull; MySQL &bull; Vanilla JS</p>
+    </footer>
+
+    <script type="module">
+        import { auth } from '/js/auth.js';
+        import { api } from '/js/api.js';
+
+        async function loadApp() {
+            // Check session
+            const user = await auth.getCurrentUser();
+            const banner = document.getElementById('session-banner');
+            if (user && banner) {
+                const roleLabel = user.role === 'ROLE_ADMIN' ? 'Administrator' : 'Customer';
+                banner.innerHTML = `Active Session: <strong>${escapeHtml(user.fullName)}</strong> (${roleLabel})`;
+                banner.style.display = 'inline-block';
+            }
+
+            // Load products
+            try {
+                const res = await api.get('/api/products?page=0&size=12');
+                const products = res.data.content;
+                const grid = document.getElementById('products-grid');
+                const meta = document.getElementById('catalog-meta');
+
+                if (meta) {
+                    meta.textContent = `Showing ${products.length} of ${res.data.totalElements} items`;
+                }
+
+                if (!products || products.length === 0) {
+                    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 3rem;">No products found in catalog.</div>';
+                    return;
+                }
+
+                grid.innerHTML = products.map(p => `
+                    <article class="product-card">
+                        <img src="${p.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600'}" 
+                             alt="${escapeHtml(p.name)}" 
+                             class="product-image" 
+                             loading="lazy"
+                             onerror="this.src='https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600'">
+                        <div class="product-body">
+                            <span class="product-category">${escapeHtml(p.categoryName || 'General')}</span>
+                            <h3 class="product-title">${escapeHtml(p.name)}</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; line-height: 1.4;">
+                                ${escapeHtml(p.description || '').substring(0, 80)}...
+                            </p>
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: auto;">
+                                <span class="product-price">$${Number(p.sellingPrice).toFixed(2)}</span>
+                                <span style="font-size: 0.8rem; font-weight: 600; color: ${p.inStock ? 'var(--success)' : 'var(--danger)'};">
+                                    ${p.inStock ? `${p.stockQuantity} in stock` : 'Out of stock'}
+                                </span>
+                            </div>
+                        </div>
+                    </article>
+                `).join('');
+            } catch (err) {
+                console.error('Failed to load products:', err);
+                const grid = document.getElementById('products-grid');
+                if (grid) {
+                    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--danger); padding: 3rem;">Failed to load catalog products.</div>';
+                }
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', loadApp);
+    </script>
+</body>
+</html>

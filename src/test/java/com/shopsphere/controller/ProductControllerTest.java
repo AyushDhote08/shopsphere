@@ -14,6 +14,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -25,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -98,7 +100,8 @@ class ProductControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/products: Should create product successfully and return 201")
+    @DisplayName("POST /api/products: Should create product successfully when authenticated as Admin")
+    @WithMockUser(roles = "ADMIN")
     void shouldCreateProductSuccessfully() throws Exception {
         ProductRequestDTO request = new ProductRequestDTO(
                 "SKU-NEW-1", "Gaming Mouse", "gaming-mouse", "Ergonomic gaming mouse",
@@ -115,6 +118,7 @@ class ProductControllerTest {
         when(productService.createProduct(any(ProductRequestDTO.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/products")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -124,7 +128,8 @@ class ProductControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/products: Should return 400 when validation constraints fail (negative price / missing SKU)")
+    @DisplayName("POST /api/products: Should return 400 when validation constraints fail")
+    @WithMockUser(roles = "ADMIN")
     void shouldReturn400OnValidationFailure() throws Exception {
         ProductRequestDTO invalidRequest = new ProductRequestDTO(
                 "", // Blank SKU
@@ -138,6 +143,7 @@ class ProductControllerTest {
         );
 
         mockMvc.perform(post("/api/products")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest())
@@ -147,6 +153,7 @@ class ProductControllerTest {
 
     @Test
     @DisplayName("POST /api/products: Should return 409 Conflict when SKU already exists")
+    @WithMockUser(roles = "ADMIN")
     void shouldReturn409OnDuplicateSku() throws Exception {
         ProductRequestDTO duplicateRequest = new ProductRequestDTO(
                 "SKU-EXISTS", "Duplicate Product", null, null,
@@ -158,6 +165,7 @@ class ProductControllerTest {
                 .thenThrow(new DuplicateResourceException("Product", "sku", "SKU-EXISTS"));
 
         mockMvc.perform(post("/api/products")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(duplicateRequest)))
                 .andExpect(status().isConflict())
@@ -184,11 +192,13 @@ class ProductControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /api/products/{id}: Should return 204 No Content on soft delete")
+    @DisplayName("DELETE /api/products/{id}: Should return 204 No Content on soft delete by Admin")
+    @WithMockUser(roles = "ADMIN")
     void shouldSoftDeleteProduct() throws Exception {
         doNothing().when(productService).deleteProduct(101L);
 
-        mockMvc.perform(delete("/api/products/101"))
+        mockMvc.perform(delete("/api/products/101")
+                        .with(csrf()))
                 .andExpect(status().isNoContent());
     }
 }

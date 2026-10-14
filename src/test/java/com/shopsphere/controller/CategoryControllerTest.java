@@ -13,6 +13,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -20,9 +21,9 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -88,7 +89,8 @@ class CategoryControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/categories: Should create category and return 201")
+    @DisplayName("POST /api/categories: Should create category and return 201 when authenticated as Admin")
+    @WithMockUser(roles = "ADMIN")
     void shouldCreateCategorySuccessfully() throws Exception {
         CategoryRequestDTO request = new CategoryRequestDTO("Smart Watches", "smart-watches", "Wearables", null, true);
 
@@ -100,6 +102,7 @@ class CategoryControllerTest {
         when(categoryService.createCategory(any(CategoryRequestDTO.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/categories")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -110,10 +113,12 @@ class CategoryControllerTest {
 
     @Test
     @DisplayName("POST /api/categories: Should return 400 when name is blank")
+    @WithMockUser(roles = "ADMIN")
     void shouldReturn400WhenCategoryNameIsBlank() throws Exception {
         CategoryRequestDTO invalidRequest = new CategoryRequestDTO("", null, "Description", null, true);
 
         mockMvc.perform(post("/api/categories")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest())
@@ -124,6 +129,7 @@ class CategoryControllerTest {
 
     @Test
     @DisplayName("POST /api/categories: Should return 409 when category name or slug is duplicate")
+    @WithMockUser(roles = "ADMIN")
     void shouldReturn409WhenCategoryAlreadyExists() throws Exception {
         CategoryRequestDTO duplicateRequest = new CategoryRequestDTO("Audio", "audio", "Duplicate", null, true);
 
@@ -131,6 +137,7 @@ class CategoryControllerTest {
                 .thenThrow(new DuplicateResourceException("Category", "name", "Audio"));
 
         mockMvc.perform(post("/api/categories")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(duplicateRequest)))
                 .andExpect(status().isConflict())
@@ -139,11 +146,13 @@ class CategoryControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /api/categories/{id}: Should return 204 No Content on deactivation")
+    @DisplayName("DELETE /api/categories/{id}: Should return 204 No Content on deactivation by Admin")
+    @WithMockUser(roles = "ADMIN")
     void shouldDeleteCategorySuccessfully() throws Exception {
         doNothing().when(categoryService).deleteCategory(1L);
 
-        mockMvc.perform(delete("/api/categories/1"))
+        mockMvc.perform(delete("/api/categories/1")
+                        .with(csrf()))
                 .andExpect(status().isNoContent());
     }
 }
