@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: shopsphere
+  profiles:
+    active: dev
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+    session:
+      timeout: 30m
+      cookie:
+        name: SHOPSPHERE_SESSION
+        http-only: true
+        secure: false # set to true in production profile over HTTPS
+        same-site: lax
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
