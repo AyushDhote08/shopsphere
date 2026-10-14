@@ -12,5 +12,7 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
 
     List<PaymentAttempt> findByOrderId(Long orderId);
 
+    Optional<PaymentAttempt> findTopByOrderIdOrderByAttemptedAtDesc(Long orderId);
+
     Optional<PaymentAttempt> findByTransactionReference(String transactionReference);
 }

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard & Analytics — ShopSphere</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header class="navbar">
+        <a href="/index.html" class="brand-logo">
+            <span>ShopSphere</span>
+            <span class="brand-badge" style="background: #4f46e5;">ADMIN CONSOLE</span>
+        </a>
+        <nav>
+            <ul class="nav-links">
+                <li><a href="/index.html" class="nav-link">&larr; Storefront Catalog</a></li>
+                <li><a href="/swagger-ui.html" target="_blank" class="nav-link">API Docs</a></li>
+            </ul>
+        </nav>
+        <div id="navbar-auth" class="nav-auth">
+            <!-- Populated dynamically by auth.js -->
+        </div>
+    </header>
+
+    <main class="container" style="max-width: 1280px;">
+        <!-- Page Title & Access Verification -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+                <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-primary);">Administrative Portal</h1>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.25rem;">
+                    Enterprise inventory restocking, fulfillment lifecycle, and real-time financial reporting.
+                </p>
+            </div>
+            <div id="admin-user-tag" style="display: none; align-items: center; gap: 0.5rem; background: #eef2ff; border: 1px solid #c7d2fe; padding: 0.4rem 0.85rem; border-radius: var(--radius-sm); font-size: 0.85rem; color: #3730a3;">
+                <span>&#128100;</span>
+                <span id="admin-user-name">Loading...</span>
+            </div>
+        </div>
+
+        <div id="admin-alert" style="display: none; margin-bottom: 1.5rem;"></div>
+
+        <!-- Admin Tab Navigation Bar -->
+        <div class="admin-tabs-nav">
+            <button class="admin-tab-btn active" data-tab="overview">
+                <span>&#128202;</span> Overview & KPIs
+            </button>
+            <button class="admin-tab-btn" data-tab="inventory">
+                <span>&#128230;</span> Inventory Management
+            </button>
+            <button class="admin-tab-btn" data-tab="orders">
+                <span>&#128221;</span> Order Fulfillment
+            </button>
+            <button class="admin-tab-btn" data-tab="analytics">
+                <span>&#128178;</span> Reports & Valuation
+            </button>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 1: OVERVIEW & KPIS -->
+        <!-- ============================================================== -->
+        <div id="tab-overview" class="admin-tab-pane active">
+            <!-- Date Filter Toolbar -->
+            <div class="admin-toolbar" style="margin-bottom: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Reporting Period:</span>
+                    <button class="btn btn-sm btn-outline range-preset-btn active" data-days="30">Last 30 Days</button>
+                    <button class="btn btn-sm btn-outline range-preset-btn" data-days="7">Last 7 Days</button>
+                    <button class="btn btn-sm btn-outline range-preset-btn" data-days="1">Today</button>
+                    
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto;">
+                        <input type="date" id="overview-start-date" class="form-control form-control-sm" style="width: auto;">
+                        <span style="color: var(--text-muted);">&ndash;</span>
+                        <input type="date" id="overview-end-date" class="form-control form-control-sm" style="width: auto;">
+                        <button id="btn-apply-overview-date" class="btn btn-primary btn-sm">Apply</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Summary Cards Grid -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon" style="background: #eef2ff; color: #4f46e5;">&#128181;</div>
+                    <div class="kpi-info">
+                        <div class="kpi-label">Period Revenue</div>
+                        <div id="kpi-revenue" class="kpi-value">$0.00</div>
+                        <div class="kpi-sub">Excludes cancelled orders</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon" style="background: #ecfdf5; color: #059669;">&#128200;</div>
+                    <div class="kpi-info">
+                        <div class="kpi-label">Estimated Gross Profit</div>
+                        <div id="kpi-profit" class="kpi-value">$0.00</div>
+                        <div class="kpi-sub">Based on item cost snapshots</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon" style="background: #fdf2f8; color: #db2777;">&#128221;</div>
+                    <div class="kpi-info">
+                        <div class="kpi-label">Period Orders</div>
+                        <div id="kpi-orders-count" class="kpi-value">0</div>
+                        <div id="kpi-aov" class="kpi-sub">Avg Order: $0.00</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon" style="background: #fffbeb; color: #d97706;">&#9888;</div>
+                    <div class="kpi-info">
+                        <div class="kpi-label">Low Stock Alerts</div>
+                        <div id="kpi-low-stock" class="kpi-value">0</div>
+                        <div class="kpi-sub">Products at/below threshold</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon" style="background: #f0fdfa; color: #0d9488;">&#9203;</div>
+                    <div class="kpi-info">
+                        <div class="kpi-label">Pending / Confirmed</div>
+                        <div id="kpi-pending-orders" class="kpi-value">0</div>
+                        <div class="kpi-sub">Awaiting shipment</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon" style="background: #f8fafc; color: #64748b;">&#128101;</div>
+                    <div class="kpi-info">
+                        <div class="kpi-label">Registered Customers</div>
+                        <div id="kpi-customers" class="kpi-value">0</div>
+                        <div class="kpi-sub">Active buyer accounts</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Daily Sales Time-Series Chart -->
+            <div class="admin-card" style="margin-top: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                    <div>
+                        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">Daily Sales & Revenue Timeline</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">Day-by-day revenue, estimated gross profit, and order volume</p>
+                    </div>
+                    <div style="display: flex; gap: 1rem; font-size: 0.8rem; font-weight: 600;">
+                        <span style="display: flex; align-items: center; gap: 0.35rem;"><span style="display: inline-block; width: 12px; height: 12px; background: #6366f1; border-radius: 2px;"></span> Revenue</span>
+                        <span style="display: flex; align-items: center; gap: 0.35rem;"><span style="display: inline-block; width: 12px; height: 12px; background: #10b981; border-radius: 2px;"></span> Gross Profit</span>
+                    </div>
+                </div>
+                <div id="sales-bars-container" class="sales-chart-wrapper">
+                    <!-- Daily bars injected dynamically -->
+                </div>
+            </div>
+
+            <!-- Top Selling Products Table -->
+            <div class="admin-card" style="margin-top: 1.5rem;">
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">Top-Selling Products (By Quantity Sold)</h3>
+                <div style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Product Name & SKU</th>
+                                <th>Category</th>
+                                <th style="text-align: center;">Units Sold</th>
+                                <th style="text-align: right;">Total Revenue</th>
+                                <th style="text-align: right;">Est. Gross Profit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="top-products-tbody">
+                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading top products...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 2: INVENTORY MANAGEMENT & MOVEMENTS -->
+        <!-- ============================================================== -->
+        <div id="tab-inventory" class="admin-tab-pane">
+            <div class="admin-card">
+                <!-- Toolbar for search and filters -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <input type="text" id="inv-search" class="form-control" style="width: 260px;" placeholder="Search SKU, name, or description...">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+                            <input type="checkbox" id="inv-low-stock-filter">
+                            <span>Show Low-Stock Only</span>
+                        </label>
+                    </div>
+                    <div>
+                        <button id="btn-toggle-movements" class="btn btn-outline btn-sm">View Movement Audit Log &rarr;</button>
+                    </div>
+                </div>
+
+                <!-- Products Stock Table -->
+                <div style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Product Name</th>
+                                <th>Category</th>
+                                <th style="text-align: right;">Cost Price</th>
+                                <th style="text-align: right;">Selling Price</th>
+                                <th style="text-align: center;">Current Stock</th>
+                                <th style="text-align: center;">Reorder Threshold</th>
+                                <th style="text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-tbody">
+                            <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading inventory records...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination Bar -->
+                <div id="inventory-pagination" class="pagination-container" style="display: none; margin-top: 1.5rem;"></div>
+            </div>
+
+            <!-- Movement Audit Log Section (Hidden by default, toggled by button) -->
+            <div id="movements-section" class="admin-card" style="display: none; margin-top: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div>
+                        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">&#128394; Inventory Movement Traceability Log</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">Complete audit trail of restocks, manual adjustments, orders, and cancellations</p>
+                    </div>
+                    <button id="btn-close-movements" class="btn btn-outline btn-sm">&times; Close Log</button>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Product & SKU</th>
+                                <th style="text-align: center;">Movement Type</th>
+                                <th style="text-align: center;">Before</th>
+                                <th style="text-align: center;">Changed</th>
+                                <th style="text-align: center;">After</th>
+                                <th>Reason / Reference</th>
+                                <th>Responsible Admin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movements-tbody">
+                            <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading movements log...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="movements-pagination" class="pagination-container" style="display: none; margin-top: 1.5rem;"></div>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 3: ORDER FULFILLMENT MANAGEMENT -->
+        <!-- ============================================================== -->
+        <div id="tab-orders" class="admin-tab-pane">
+            <div class="admin-card">
+                <!-- Orders Filter Toolbar -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                        <input type="text" id="order-search-input" class="form-control form-control-sm" style="width: 220px;" placeholder="Search Order Number...">
+                        <select id="order-status-filter" class="form-control form-control-sm" style="width: 170px;">
+                            <option value="">All Statuses</option>
+                            <option value="PENDING">PENDING</option>
+                            <option value="CONFIRMED">CONFIRMED</option>
+                            <option value="SHIPPED">SHIPPED</option>
+                            <option value="DELIVERED">DELIVERED</option>
+                            <option value="CANCELLED">CANCELLED</option>
+                        </select>
+                        <button id="btn-filter-orders" class="btn btn-primary btn-sm">Filter</button>
+                    </div>
+                </div>
+
+                <!-- Orders Table -->
+                <div style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Order Number</th>
+                                <th>Date Placed</th>
+                                <th>Customer</th>
+                                <th style="text-align: right;">Total Amount</th>
+                                <th style="text-align: right;">Gross Profit</th>
+                                <th style="text-align: center;">Order Status</th>
+                                <th style="text-align: center;">Payment</th>
+                                <th style="text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-orders-tbody">
+                            <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading customer orders...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="admin-orders-pagination" class="pagination-container" style="display: none; margin-top: 1.5rem;"></div>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 4: REPORTS & VALUATION -->
+        <!-- ============================================================== -->
+        <div id="tab-analytics" class="admin-tab-pane">
+            <!-- Warehouse Asset Valuation -->
+            <div class="admin-card" style="margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">Warehouse Inventory Asset Valuation</h3>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                    Real-time capital balance based on current active catalog quantities, wholesale costs, and retail prices.
+                </p>
+
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background: #e0f2fe; color: #0284c7;">&#127970;</div>
+                        <div class="kpi-info">
+                            <div class="kpi-label">Wholesale Cost Value</div>
+                            <div id="val-cost" class="kpi-value">$0.00</div>
+                            <div class="kpi-sub">Total capital invested</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background: #f0fdf4; color: #16a34a;">&#128176;</div>
+                        <div class="kpi-info">
+                            <div class="kpi-label">Retail Market Value</div>
+                            <div id="val-retail" class="kpi-value">$0.00</div>
+                            <div class="kpi-sub">Potential consumer sales</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background: #faf5ff; color: #9333ea;">&#10024;</div>
+                        <div class="kpi-info">
+                            <div class="kpi-label">Potential Gross Profit</div>
+                            <div id="val-profit" class="kpi-value">$0.00</div>
+                            <div class="kpi-sub">Retail value minus cost</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon" style="background: #f8fafc; color: #475569;">&#128230;</div>
+                        <div class="kpi-info">
+                            <div class="kpi-label">Units in Warehouse</div>
+                            <div id="val-units" class="kpi-value">0</div>
+                            <div id="val-prods" class="kpi-sub">Across 0 products</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales By Category Table -->
+            <div class="admin-card">
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">Sales by Category Breakdown</h3>
+                <div style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Category Name</th>
+                                <th style="text-align: center;">Units Sold</th>
+                                <th style="text-align: right;">Total Revenue</th>
+                                <th style="text-align: right;">Gross Profit</th>
+                                <th style="text-align: right;">Profit Margin %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="category-sales-tbody">
+                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading category sales...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- MODALS -->
+        <!-- ============================================================== -->
+
+        <!-- 1. Restock Modal -->
+        <div id="modal-restock" class="modal-backdrop" style="display: none;">
+            <div class="modal-dialog" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3 id="modal-restock-title" style="font-size: 1.15rem; font-weight: 700;">Restock Inventory</h3>
+                    <button class="modal-close-btn btn-close-modal">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <input type="hidden" id="restock-product-id">
+                    <div style="margin-bottom: 1rem;">
+                        <strong id="restock-product-name" style="color: var(--text-primary);">Product Name</strong>
+                        <div id="restock-product-sku" style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">SKU: ELEC-001</div>
+                        <div id="restock-current-stock" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">Current Stock: 10</div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label" for="restock-qty">Restock Quantity to Add *</label>
+                        <input type="number" id="restock-qty" class="form-control" min="1" value="10" required>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label" for="restock-ref">Reference ID / Delivery Note (Optional)</label>
+                        <input type="text" id="restock-ref" class="form-control" placeholder="e.g. PO-88320 or BATCH-01">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="restock-reason">Reason / Supplier Notes</label>
+                        <input type="text" id="restock-reason" class="form-control" placeholder="e.g. Supplier delivery from TechCorp">
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--border-color); background: #f8fafc;">
+                    <button class="btn btn-outline btn-sm btn-close-modal">Cancel</button>
+                    <button id="btn-submit-restock" class="btn btn-primary btn-sm">Confirm Restock</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Stock Adjustment Modal -->
+        <div id="modal-adjust" class="modal-backdrop" style="display: none;">
+            <div class="modal-dialog" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3 id="modal-adjust-title" style="font-size: 1.15rem; font-weight: 700;">Manual Stock Adjustment</h3>
+                    <button class="modal-close-btn btn-close-modal">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <input type="hidden" id="adjust-product-id">
+                    <div style="margin-bottom: 1rem;">
+                        <strong id="adjust-product-name" style="color: var(--text-primary);">Product Name</strong>
+                        <div id="adjust-product-sku" style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">SKU: ELEC-001</div>
+                        <div id="adjust-current-stock" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">Current Stock: 10</div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label" for="adjust-qty">Stock Delta (Use positive to add, negative to subtract) *</label>
+                        <input type="number" id="adjust-qty" class="form-control" placeholder="e.g. -2 for damaged, +5 for audit count" required>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label" for="adjust-reason">Mandatory Adjustment Justification *</label>
+                        <textarea id="adjust-reason" class="form-control" rows="3" placeholder="Explain why stock is being modified (e.g. Broken in shipping, physical inventory recount reconciliation)" required></textarea>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="adjust-ref">Reference ID (Optional)</label>
+                        <input type="text" id="adjust-ref" class="form-control" placeholder="e.g. AUDIT-2026-Q4">
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--border-color); background: #f8fafc;">
+                    <button class="btn btn-outline btn-sm btn-close-modal">Cancel</button>
+                    <button id="btn-submit-adjust" class="btn btn-primary btn-sm">Apply Adjustment</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Threshold Modal -->
+        <div id="modal-threshold" class="modal-backdrop" style="display: none;">
+            <div class="modal-dialog" style="max-width: 450px;">
+                <div class="modal-header">
+                    <h3 style="font-size: 1.15rem; font-weight: 700;">Configure Reorder Threshold</h3>
+                    <button class="modal-close-btn btn-close-modal">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <input type="hidden" id="threshold-product-id">
+                    <div style="margin-bottom: 1rem;">
+                        <strong id="threshold-product-name" style="color: var(--text-primary);">Product Name</strong>
+                        <div id="threshold-product-sku" style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">SKU: ELEC-001</div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="threshold-value">Low Stock Threshold (Alerts when stock &le; value) *</label>
+                        <input type="number" id="threshold-value" class="form-control" min="0" required>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--border-color); background: #f8fafc;">
+                    <button class="btn btn-outline btn-sm btn-close-modal">Cancel</button>
+                    <button id="btn-submit-threshold" class="btn btn-primary btn-sm">Save Threshold</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Order Management Modal -->
+        <div id="modal-order-manage" class="modal-backdrop" style="display: none;">
+            <div class="modal-dialog" style="max-width: 750px;">
+                <div class="modal-header">
+                    <h3 id="modal-order-number" style="font-size: 1.25rem; font-weight: 700;">Order Details</h3>
+                    <button class="modal-close-btn btn-close-modal">&times;</button>
+                </div>
+                <div id="modal-order-body" class="modal-body" style="padding: 1.5rem; max-height: 75vh; overflow-y: auto;">
+                    <!-- Dynamically populated -->
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); background: #f8fafc;">
+                    <div id="order-status-actions" style="display: flex; gap: 0.5rem;">
+                        <!-- Transition buttons populated dynamically -->
+                    </div>
+                    <button class="btn btn-outline btn-sm btn-close-modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 ShopSphere E-Commerce &bull; Spring Boot 3.4 &bull; MySQL &bull; Vanilla JS</p>
+    </footer>
+
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/admin.js"></script>
+</body>
+</html>

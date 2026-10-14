@@ -17,6 +17,9 @@ public class InventoryAuditLog {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
+    @Column(name = "stock_before")
+    private Integer stockBefore;
+
     @Column(name = "quantity_changed", nullable = false)
     private Integer quantityChanged;
 
@@ -32,6 +35,10 @@ public class InventoryAuditLog {
     @Column(columnDefinition = "TEXT")
     private String reason;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -41,11 +48,24 @@ public class InventoryAuditLog {
     public InventoryAuditLog(Product product, Integer quantityChanged, Integer stockAfter,
                              String movementType, String referenceId, String reason) {
         this.product = product;
+        this.stockBefore = stockAfter != null && quantityChanged != null ? stockAfter - quantityChanged : null;
         this.quantityChanged = quantityChanged;
         this.stockAfter = stockAfter;
         this.movementType = movementType;
         this.referenceId = referenceId;
         this.reason = reason;
+    }
+
+    public InventoryAuditLog(Product product, Integer stockBefore, Integer quantityChanged, Integer stockAfter,
+                             String movementType, String referenceId, String reason, User user) {
+        this.product = product;
+        this.stockBefore = stockBefore;
+        this.quantityChanged = quantityChanged;
+        this.stockAfter = stockAfter;
+        this.movementType = movementType;
+        this.referenceId = referenceId;
+        this.reason = reason;
+        this.user = user;
     }
 
     @PrePersist
@@ -75,6 +95,14 @@ public class InventoryAuditLog {
 
     public void setQuantityChanged(Integer quantityChanged) {
         this.quantityChanged = quantityChanged;
+    }
+
+    public Integer getStockBefore() {
+        return stockBefore;
+    }
+
+    public void setStockBefore(Integer stockBefore) {
+        this.stockBefore = stockBefore;
     }
 
     public Integer getStockAfter() {
@@ -107,6 +135,14 @@ public class InventoryAuditLog {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public LocalDateTime getCreatedAt() {

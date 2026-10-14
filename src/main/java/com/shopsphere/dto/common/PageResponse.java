@@ -30,6 +30,10 @@ public class PageResponse<T> {
         this.hasPrevious = page.hasPrevious();
     }
 
+    public static <T> PageResponse<T> from(Page<T> page) {
+        return new PageResponse<>(page);
+    }
+
     public PageResponse(List<T> content, int pageNumber, int pageSize, long totalElements, int totalPages,
                         boolean isFirst, boolean isLast, boolean hasNext, boolean hasPrevious) {
         this.content = content;

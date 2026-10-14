@@ -9,7 +9,7 @@
 | **Phase 2** | Authentication & Security (Spring Security, Sessions, BCrypt, Roles, CSRF, Auth UI) | **Completed** | 59/59 tests passing & live session verified |
 | **Phase 3** | Product Catalog & Categories (Frontend UI & Storefront Integration) | **Completed** | 67/67 tests passing & live storefront verified |
 | **Phase 4** | Shopping Cart, Checkout Simulation, and Order Management | **Completed** | Persistent Cart + Pessimistic Locking + 91/91 tests passing |
-| **Phase 5** | Admin Dashboard & Business Analytics | Planned | KPIs + Reports + Stock Alerts |
+| **Phase 5** | Admin Dashboard, Inventory Management, and Business Analytics | **Completed** | 128/128 tests passing + Live Admin Portal & Restocking verified |
 | **Phase 6** | Reviews, Wishlist & Customer Extras | Planned | Ratings + Wishlist |
 | **Phase 7** | Comprehensive Testing, Security Audit & Hardening | Planned | Negative tests + Concurrency stress tests |
 | **Phase 8** | Production Deployment, Interview Guide & Documentation | Planned | Docker + Live Demo |
@@ -18,7 +18,7 @@
 
 ## 2. Current Status Summary
 
-- **Current Active Phase**: **Phase 4 Completed** (Shopping Cart, Server-Side Recalculations, Checkout Simulation, Pessimistic Row Locking, Immutable Order Snapshots, Idempotency, Order History & Receipt UI).
+- **Current Active Phase**: **Phase 5 Completed** (Admin Dashboard, Concurrency-Safe Inventory Restocking, Stock Adjustments, Low-Stock Tracking, Order Fulfillment Lifecycle State Machine, Inventory Restoration on Cancellation, Continuous Daily Sales Analytics, Warehouse Inventory Asset Valuation, Responsive Admin Console UI).
 - **Completed Features**:
   - **Phase 0 Setup**:
     - Environment inspected (Java 24 runtime, Maven 3.9.6, MySQL 8.0, Git 2.51).
@@ -68,11 +68,23 @@
       - `src/main/resources/static/checkout.html` & `src/main/resources/static/js/checkout.js`: Checkout flow with saved address radio selection, new address form, payment method selector, simulation outcome toggle (for live interview ACID demonstration), and idempotency key generation.
       - `src/main/resources/static/order-confirmation.html` & `src/main/resources/static/js/order-confirmation.js`: Customer receipt page displaying order confirmation, shipping destination, financial totals, and immutable snapshot table.
       - `src/main/resources/static/orders.html` & `src/main/resources/static/js/orders.js`: Customer order history table with status badges (`CONFIRMED`, `PAID`, `PENDING`, etc.), pagination, and quick-view detail modal.
-      - `src/main/resources/static/js/auth.js`: Real-time cart item count badge on navbar.
+      - `src/main/resources/static/js/auth.js`: Real-time cart item count badge on navbar and conditional "Admin Console" link for `ROLE_ADMIN` users.
+  - **Phase 5 Admin Dashboard, Inventory Management & Business Analytics**:
+    - **Database Migration**: Created `V5__admin_inventory_and_analytics_enhancements.sql` adding `unit_cost_snapshot` to `order_items` (backfilled from `products.cost_price`), `stock_before` and `user_id` FK to `inventory_audit_log`, and composite performance indexes (`idx_orders_status_created`, `idx_inventory_audit_created`, `idx_inventory_audit_movement`).
+    - **Historical Gross Profit Accounting**: Populates `order_items.unit_cost_snapshot` at checkout time using `product.getCostPrice()`. Calculates estimated gross profit deterministically as $\sum (\text{lineTotal} - (\text{unitCostSnapshot} \times \text{quantity}))$, insulating historical financials from subsequent product cost changes.
+    - **Order Lifecycle State Machine**: Enforces strict state transitions (`PENDING` -> `CONFIRMED` -> `SHIPPED` -> `DELIVERED`, and cancellation from `PENDING`/`CONFIRMED`). On cancellation, automatically restores inventory using `@Lock(LockModeType.PESSIMISTIC_WRITE)` and records an `ORDER_CANCELLED_RESTORE` audit log.
+    - **Continuous Time-Series Sales Analytics**: Generates unbroken daily revenue, profit, and order volume timeline covering the requested date range, initializing zero-value placeholder days to prevent chart skew.
+    - **Warehouse Asset Valuation**: Aggregates total warehouse investment at cost, total retail asset value, unrealized gross profit, and total units in stock.
+    - **Concurrency-Safe Restocking & Adjustments**: Pessimistic write locks ensure safe concurrent restocks and manual stock adjustments. Negative adjustments exceeding available stock are rejected with `BadRequestException`, and a justification reason is strictly mandatory.
+    - **Role-Based Security Discipline**: All `/api/admin/**` endpoints are strictly guarded by Spring Security requiring `ROLE_ADMIN`. Anonymous users receive 401 Unauthorized, and customer users (`ROLE_CUSTOMER`) receive 403 Forbidden.
+    - **Responsive Admin Portal**:
+      - `src/main/resources/static/admin.html`: Tabbed portal with Overview (KPI cards + interactive daily sales bar chart), Inventory Management (search, filter, stock badges, restock/adjust/threshold modals, movement history), Order Fulfillment (order search, status badges, details modal, status update workflow), and Reports & Valuation.
+      - `src/main/resources/static/js/admin.js`: Vanilla ES6 script managing role checks, dynamic charts, modals, and API calls.
+      - `src/main/resources/static/css/styles.css`: Complete styling for KPI cards, tab navigation, admin tables, stock badges, and CSS bar charts.
 - **Known Defects**: None.
 - **Tests Executed & Actual Results**:
   - `mvn clean test`: **BUILD SUCCESS**
-  - Total Tests Run: **91**, Failures: **0**, Errors: **0**, Skipped: **0**
+  - Total Tests Run: **128**, Failures: **0**, Errors: **0**, Skipped: **0**
     - `ShopSphereApplicationTests`: 1 passed (Spring context boot)
     - `CategoryRepositoryTest`: 5 passed (JPA persistence & queries)
     - `ProductRepositoryTest`: 6 passed (Category hierarchy, keyword query, price boundaries, stock filtering)
@@ -84,6 +96,10 @@
     - `CartServiceTest`: 7 passed (Add item, stock validation, recalculations, update quantity, remove item, clear cart, user isolation)
     - `OrderServiceTest`: 6 passed (Successful checkout, rollback on payment failure, out of stock rejection, idempotency key replay, user isolation)
     - `OrderConcurrencyIntegrationTest`: 1 passed (Pessimistic locking stress test: concurrent checkout for the final unit of stock—exactly 1 succeeds, 1 fails with InsufficientStockException, final stock is 0 without overselling)
+    - `AdminInventoryServiceTest`: 9 passed (Restocking, positive/negative adjustments, negative stock guard, mandatory reasons, threshold updates)
+    - `AdminOrderServiceTest`: 8 passed (Fulfillment lifecycle, cancellation stock restoration, terminal state protection, gross profit calculation)
+    - `AdminDashboardServiceTest`: 4 passed (Summary KPIs, continuous daily sales timeline, top selling products, inventory valuation)
+    - `AdminSecurityAuthorizationTest`: 16 passed (Anonymous 401, customer 403, admin 200, CSRF protection across all admin endpoints)
     - `CategoryControllerTest`: 7 passed (MockMvc REST API & validation tests)
     - `ProductControllerTest`: 12 passed (MockMvc REST API, pagination, filtering, query param validation, 400/404 handling)
     - `AuthControllerTest`: 8 passed (MockMvc auth endpoints & validation)
@@ -91,10 +107,14 @@
     - `CartControllerTest`: 6 passed (MockMvc cart endpoints, authenticated security, validation)
     - `OrderControllerTest`: 4 passed (MockMvc checkout, order retrieval, security enforcement)
 - **Manual Live Verification**:
-  - Verified static endpoints `/cart.html`, `/checkout.html`, `/order-confirmation.html`, and `/orders.html` are accessible.
-  - Verified authenticated endpoints `/api/cart/**`, `/api/orders/**`, `/api/addresses/**` reject unauthenticated requests with 401 Unauthorized.
-  - Verified multi-threaded pessimistic locking ensures concurrency safety on contested stock.
+  - Verified `/admin.html` loads correctly and checks user roles.
+  - Verified anonymous requests to `/api/admin/**` return 401 Unauthorized.
+  - Verified customer (`ROLE_CUSTOMER`) requests to `/api/admin/**` return 403 Forbidden.
+  - Verified administrator (`ROLE_ADMIN`) successfully logs in and accesses all dashboard, sales, inventory, and order endpoints.
+  - Verified restock (`+15` units) and adjustment (`-2` units) update stock and create audit log entries.
+  - Verified end-to-end customer checkout to admin fulfillment (`CONFIRMED` -> `SHIPPED` -> `DELIVERED`).
+  - Verified order cancellation restores stock to product inventory and logs `ORDER_CANCELLED_RESTORE`.
 - **Outstanding Tasks**:
-  - Await user review and approval of Phase 4 deliverables.
+  - Await user review and approval of Phase 5 deliverables.
 - **Next Recommended Action**:
-  - Proceed to Phase 5: Admin Dashboard, Inventory Restocking, and Business Analytics.
+  - Strictly stop and present Phase 5 completion summary. Await approval before proceeding to Phase 6.

@@ -364,57 +364,196 @@
 
 ## 7. Administrator Management Endpoints (`/api/admin/**`)
 
+> [!IMPORTANT]
+> All `/api/admin/**` endpoints strictly require `ROLE_ADMIN` authorization and valid CSRF token headers (`X-XSRF-TOKEN`) on mutating methods (`POST`, `PUT`, `PATCH`, `DELETE`). Anonymous requests return `401 Unauthorized`, and customer accounts (`ROLE_CUSTOMER`) receive `403 Forbidden`.
+
 ### 7.1 Dashboard Metrics & KPI Overview
-- **Endpoint**: `GET /api/admin/metrics/overview`
+- **Endpoint**: `GET /api/admin/dashboard`
+- **Auth**: `ROLE_ADMIN`
+- **Query Params**: `startDate` (`YYYY-MM-DD`), `endDate` (`YYYY-MM-DD`)
+- **Response**: `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "totalProducts": 12,
+    "totalCategories": 5,
+    "totalCustomers": 14,
+    "totalOrders": 1,
+    "ordersAwaitingProcessing": 0,
+    "lowStockCount": 0,
+    "periodRevenue": 1154.98,
+    "periodProfit": 459.98,
+    "periodOrdersCount": 1,
+    "periodStartDate": "2026-09-14",
+    "periodEndDate": "2026-10-14"
+  }
+}
+```
+
+### 7.2 Daily Sales Time-Series Timeline
+- **Endpoint**: `GET /api/admin/dashboard/sales`
+- **Auth**: `ROLE_ADMIN`
+- **Query Params**: `startDate` (`YYYY-MM-DD`), `endDate` (`YYYY-MM-DD`)
+- **Response**: `200 OK` (Continuous timeline without date gaps)
+```json
+{
+  "success": true,
+  "data": {
+    "startDate": "2026-09-14",
+    "endDate": "2026-10-14",
+    "totalRevenue": 1154.98,
+    "totalProfit": 459.98,
+    "totalOrders": 1,
+    "averageOrderValue": 1154.98,
+    "dailySales": [
+      {
+        "date": "2026-10-14",
+        "orderCount": 1,
+        "revenue": 1154.98,
+        "profit": 459.98
+      }
+    ]
+  }
+}
+```
+
+### 7.3 Top-Selling Products Report
+- **Endpoint**: `GET /api/admin/dashboard/top-products`
+- **Auth**: `ROLE_ADMIN`
+- **Query Params**: `limit` (default: 5), `startDate` (`YYYY-MM-DD`), `endDate` (`YYYY-MM-DD`)
+- **Response**: `200 OK`
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "productId": 7,
+      "productName": "4K UHD UltraWide Curved Monitor 34-inch",
+      "productSku": "MON-4K-UW34",
+      "categoryName": "Monitors",
+      "unitsSold": 2,
+      "totalRevenue": 1099.98,
+      "totalProfit": 459.98
+    }
+  ]
+}
+```
+
+### 7.4 Category Sales & Profitability Report
+- **Endpoint**: `GET /api/admin/reports/categories`
+- **Auth**: `ROLE_ADMIN`
+- **Query Params**: `startDate` (`YYYY-MM-DD`), `endDate` (`YYYY-MM-DD`)
+- **Response**: `200 OK`
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "categoryId": 2,
+      "categoryName": "Monitors",
+      "unitsSold": 2,
+      "revenue": 1099.98,
+      "profit": 459.98
+    }
+  ]
+}
+```
+
+### 7.5 Warehouse Inventory Asset Valuation
+- **Endpoint**: `GET /api/admin/reports/inventory`
 - **Auth**: `ROLE_ADMIN`
 - **Response**: `200 OK`
 ```json
 {
   "success": true,
   "data": {
-    "totalRevenue": 48250.75,
-    "totalGrossProfit": 19420.30,
-    "totalOrders": 324,
-    "activeCustomers": 180,
-    "lowStockCount": 3,
-    "pendingOrdersCount": 8
+    "totalProductsCount": 12,
+    "totalUnitsInStock": 773,
+    "totalCostValue": 42245.00,
+    "totalRetailValue": 84551.00,
+    "potentialGrossProfit": 42306.00,
+    "lowStockProductsCount": 0
   }
 }
 ```
 
-### 7.2 Admin Product CRUD
-- `GET /api/admin/products`: Paginated list including inactive products and profit margins.
-- `POST /api/admin/products`: Create new product (validates unique SKU).
-- `PUT /api/admin/products/{id}`: Update product details, prices, stock threshold.
-- `PATCH /api/admin/products/{id}/status`: Toggle active status (`isActive = true|false`).
+### 7.6 Inventory Stock Levels & Search
+- **Endpoint**: `GET /api/admin/inventory`
+- **Auth**: `ROLE_ADMIN`
+- **Query Params**: `page` (default 0), `size` (default 10), `query` (optional search term), `lowStockOnly` (boolean)
+- **Response**: `200 OK` (Paginated `PageResponse<ProductResponseDTO>`)
 
-### 7.3 Admin Inventory Stock Adjustment
-- **Endpoint**: `POST /api/admin/inventory/adjust`
+### 7.7 Low-Stock Alert Listing
+- **Endpoint**: `GET /api/admin/inventory/low-stock`
+- **Auth**: `ROLE_ADMIN`
+- **Query Params**: `page` (default 0), `size` (default 10)
+- **Response**: `200 OK`
+
+### 7.8 Configure Product Reorder Threshold
+- **Endpoint**: `PATCH /api/admin/inventory/products/{id}/threshold`
 - **Auth**: `ROLE_ADMIN`
 - **Request Body**:
 ```json
 {
-  "productId": 101,
-  "quantityAdjustment": 50,
-  "reason": "Supplier restocking batch #4401"
+  "lowStockThreshold": 8
 }
 ```
-- **Response**: `200 OK` (Stock updated & written to `inventory_audit_log`)
+- **Response**: `200 OK`
 
-### 7.4 Admin Order Fulfillment & Status Update
+### 7.9 Restock Product Inventory
+- **Endpoint**: `POST /api/admin/inventory/restock`
+- **Auth**: `ROLE_ADMIN`
+- **Request Body**:
+```json
+{
+  "productId": 7,
+  "quantity": 15,
+  "referenceId": "PO-2026-LIVE-01",
+  "reason": "Supplier shipment replenishment batch #1"
+}
+```
+- **Response**: `200 OK`
+
+### 7.10 Manual Stock Adjustment
+- **Endpoint**: `POST /api/admin/inventory/adjustments`
+- **Auth**: `ROLE_ADMIN`
+- **Request Body**:
+```json
+{
+  "productId": 7,
+  "quantityAdjustment": -2,
+  "reason": "Physical count discrepancy / water damage"
+}
+```
+- **Response**: `200 OK`
+
+### 7.11 Inventory Movement Audit Logs
+- **Endpoint**: `GET /api/admin/inventory/movements`
+- **Auth**: `ROLE_ADMIN`
+- **Query Params**: `productId` (optional), `movementType` (optional), `page` (default 0), `size` (default 10)
+- **Response**: `200 OK` (Paginated historical audit trail with stock before/after, reasons, and responsible administrator)
+
+### 7.12 Order Search & Fulfillment Listing
+- **Endpoint**: `GET /api/admin/orders`
+- **Auth**: `ROLE_ADMIN`
+- **Query Params**: `status` (optional `OrderStatus`), `orderNumber` (optional), `startDate`, `endDate`, `page`, `size`
+- **Response**: `200 OK` (Paginated `PageResponse<AdminOrderResponseDTO>`)
+
+### 7.13 Admin Order Details & Profit Breakdown
+- **Endpoint**: `GET /api/admin/orders/{id}`
+- **Auth**: `ROLE_ADMIN`
+- **Response**: `200 OK` (Includes line-by-line snapshot costs and calculated gross profit)
+
+### 7.14 Order Status Transition
 - **Endpoint**: `PATCH /api/admin/orders/{id}/status`
 - **Auth**: `ROLE_ADMIN`
 - **Request Body**:
 ```json
 {
   "newStatus": "SHIPPED",
-  "note": "Dispatched via FedEx Tracking #9938210"
+  "reason": "Dispatched via FedEx Tracking #FX99283711"
 }
 ```
-- **Response**: `200 OK` (Transitions enforced by state machine)
-
-### 7.5 Sales & Financial Reports
-- **Endpoint**: `GET /api/admin/reports/sales`
-- **Auth**: `ROLE_ADMIN`
-- **Query Params**: `startDate`, `endDate`, `groupBy` (`DAY`, `MONTH`, `CATEGORY`)
-- **Response**: `200 OK` (Detailed revenue, cost, profit, order counts)
+- **Validation**: State machine enforces `PENDING` $\to$ `CONFIRMED` $\to$ `SHIPPED` $\to$ `DELIVERED`. If `CANCELLED` from active holding state, automatically restores stock with pessimistic lock.
+- **Response**: `200 OK`

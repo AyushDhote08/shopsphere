@@ -87,6 +87,32 @@ flowchart TD
 | `GET` | `/api/orders/{id}` | Get order details by ID (user isolated) | `ROLE_CUSTOMER` | `200 OK` / `404` |
 | `GET` | `/api/orders/number/{orderNumber}` | Get order details by public tracking number | `ROLE_CUSTOMER` | `200 OK` / `404` |
 
+### Admin Dashboard & Analytics APIs (`/api/admin/dashboard` & `/api/admin/reports`)
+| Method | Endpoint | Description | Role / Auth | Status Code |
+|---|---|---|---|---|
+| `GET` | `/api/admin/dashboard` | Period summary KPIs (revenue, profit, orders, low-stock count) | `ROLE_ADMIN` | `200 OK` / `401` / `403` |
+| `GET` | `/api/admin/dashboard/sales` | Continuous daily sales, revenue, profit, and order timeline | `ROLE_ADMIN` | `200 OK` / `401` / `403` |
+| `GET` | `/api/admin/dashboard/top-products` | Top-selling products ranked by units sold and revenue | `ROLE_ADMIN` | `200 OK` / `401` / `403` |
+| `GET` | `/api/admin/reports/categories` | Category sales, unit volume, and profitability report | `ROLE_ADMIN` | `200 OK` / `401` / `403` |
+| `GET` | `/api/admin/reports/inventory` | Warehouse asset valuation (cost vs retail, unrealized profit) | `ROLE_ADMIN` | `200 OK` / `401` / `403` |
+
+### Admin Inventory Management APIs (`/api/admin/inventory`)
+| Method | Endpoint | Description | Role / Auth | Status Code |
+|---|---|---|---|---|
+| `GET` | `/api/admin/inventory` | Paginated product stock levels with search and low-stock filter | `ROLE_ADMIN` | `200 OK` / `401` / `403` |
+| `GET` | `/api/admin/inventory/low-stock` | Products at or below their reorder threshold | `ROLE_ADMIN` | `200 OK` / `401` / `403` |
+| `PATCH` | `/api/admin/inventory/products/{id}/threshold` | Configure low-stock alert threshold | `ROLE_ADMIN` | `200 OK` / `400` / `403` / `404` |
+| `POST` | `/api/admin/inventory/restock` | Restock inventory with pessimistic locking & audit logging | `ROLE_ADMIN` | `200 OK` / `400` / `403` / `404` |
+| `POST` | `/api/admin/inventory/adjustments` | Manual stock adjustment (positive/negative) with mandatory reason | `ROLE_ADMIN` | `200 OK` / `400` / `403` / `404` |
+| `GET` | `/api/admin/inventory/movements` | Paginated audit log of all historical inventory movements | `ROLE_ADMIN` | `200 OK` / `401` / `403` |
+
+### Admin Order Management APIs (`/api/admin/orders`)
+| Method | Endpoint | Description | Role / Auth | Status Code |
+|---|---|---|---|---|
+| `GET` | `/api/admin/orders` | Paginated order search with status, order number, and date range filters | `ROLE_ADMIN` | `200 OK` / `401` / `403` |
+| `GET` | `/api/admin/orders/{id}` | Order details including cost snapshot breakdown & gross profit | `ROLE_ADMIN` | `200 OK` / `401` / `403` / `404` |
+| `PATCH` | `/api/admin/orders/{id}/status` | Lifecycle status transition (`CONFIRMED` $\to$ `SHIPPED` $\to$ `DELIVERED`, or `CANCELLED` with auto inventory restoration) | `ROLE_ADMIN` | `200 OK` / `400` / `403` / `404` |
+
 ---
 
 ## 4. Local Setup & Execution
@@ -119,6 +145,7 @@ mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
 - **Secure Checkout**: [http://localhost:8080/checkout.html](http://localhost:8080/checkout.html)
 - **Order Confirmation**: [http://localhost:8080/order-confirmation.html](http://localhost:8080/order-confirmation.html)
 - **Customer Orders**: [http://localhost:8080/orders.html](http://localhost:8080/orders.html)
+- **Administrative Portal**: [http://localhost:8080/admin.html](http://localhost:8080/admin.html) *(Requires `ROLE_ADMIN`)*
 - **Sign In Page**: [http://localhost:8080/login.html](http://localhost:8080/login.html)
 - **Registration Page**: [http://localhost:8080/register.html](http://localhost:8080/register.html)
 - **Interactive Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
@@ -126,7 +153,7 @@ mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
 
 ### Executing Automated Tests
 ```bash
-# Run all 91 unit, integration, validation, repository, concurrency, and security tests
+# Run all 128 unit, integration, validation, repository, concurrency, and security tests
 mvn clean test
 ```
 
@@ -134,20 +161,26 @@ mvn clean test
 
 ## 5. Security & Architectural Interview Concepts
 
-1. **Pessimistic Row Locking (`SELECT ... FOR UPDATE`) vs Optimistic Locking**:
-   - In high-concurrency e-commerce scenarios where stock is low (e.g. flash sales), optimistic locking (`@Version`) would cause high transaction rollback rates when multiple users attempt to purchase the last unit simultaneously.
+1. **Historical Cost Snapshots for Deterministic Gross Profit**:
+   - Product supplier cost prices fluctuate over time. Calculating gross profit using live product cost would distort historical accounting.
+   - ShopSphere takes a snapshot of `costPrice` on `order_items.unit_cost_snapshot` during checkout. Estimated gross profit is calculated deterministically as $\sum (\text{lineTotal} - (\text{unitCostSnapshot} \times \text{quantity}))$, accurately insulating past reporting from future supplier price fluctuations.
+2. **Order Lifecycle State Machine & Automated Inventory Restoration**:
+   - Status transitions follow a strict directed state graph: `PENDING` $\to$ `CONFIRMED` $\to$ `SHIPPED` $\to$ `DELIVERED`. `DELIVERED` and `CANCELLED` are terminal states.
+   - If an order is cancelled from `PENDING` or `CONFIRMED`, inventory is automatically restored using pessimistic row locks (`findByIdWithPessimisticLock`), and an `ORDER_CANCELLED_RESTORE` audit log is created.
+3. **Pessimistic Row Locking (`SELECT ... FOR UPDATE`) vs Optimistic Locking**:
+   - In high-concurrency e-commerce scenarios where stock is low (e.g. flash sales), optimistic locking (`@Version`) causes high transaction rollback rates when multiple users attempt to purchase the last unit simultaneously.
    - ShopSphere implements `@Lock(LockModeType.PESSIMISTIC_WRITE)` on `ProductRepository.findAllByIdInWithPessimisticLock()`. At the database engine level (MySQL InnoDB), this acquires exclusive row locks (`SELECT ... FOR UPDATE`), forcing concurrent transactions to serialize, verifying real-time stock, and preventing negative stock or overselling.
-2. **Transaction Rollback On Payment Failure**:
+4. **Transaction Rollback On Payment Failure**:
    - Checkout is wrapped in `@Transactional(rollbackFor = Exception.class)`. When payment simulation fails (simulated card rejection), `PaymentFailedException` is thrown.
    - Spring Transaction Manager intercepts this unchecked exception and rolls back all database operations within the transaction: inventory deduction is undone, cart items remain intact, and no corrupt or partial order record is committed.
-3. **Zero Client Trust & Financial Precision**:
+5. **Zero Client Trust & Financial Precision**:
    - Frontend clients never send prices, discounts, taxes, or order totals. All calculations are strictly executed server-side using `BigDecimal` with `RoundingMode.HALF_UP` and stored in `DECIMAL(12, 2)` columns, avoiding IEEE 754 floating-point inaccuracies.
-4. **Immutable Purchase-Time Order Snapshots**:
-   - An e-commerce order is a historical legal receipt. `OrderItem` stores immutable copies of `productNameSnapshot`, `productSkuSnapshot`, and `unitPriceSnapshot`. If an administrator subsequently alters product names, increases prices, or soft-deletes items in the catalog, historical orders and customer receipts remain mathematically unchanged.
-5. **Idempotency in Payment & Checkout**:
+6. **Continuous Time-Series Aggregation Without Chart Skew**:
+   - In time-series charts, database `GROUP BY` only returns dates with orders, leaving missing days. If plotted directly, a gap between Monday and Friday appears continuous.
+   - ShopSphere's analytics service pre-populates every date in the requested range with zero-value objects before accumulating order totals, ensuring visually honest, continuous charts.
+7. **Idempotency in Payment & Checkout**:
    - The frontend generates a unique UUID `idempotencyKey` per checkout session. If network lag causes duplicate form submissions or retries, the server detects the existing key for that customer and returns the original order confirmation without duplicate charges or double inventory reduction.
-6. **Session-Based Authentication for Monoliths**:
-   - Uses standard, browser-native `JSESSIONID` cookies with `HttpOnly`, `SameSite=Lax`, and session fixation protection (`migrateSession()`), eliminating token exposure risks in browser storage.
-7. **Cookie-Based CSRF Protection**:
-   - Configured via `CookieCsrfTokenRepository.withHttpOnlyFalse()`. The client reads `XSRF-TOKEN` and sends it as `X-XSRF-TOKEN` on mutating HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`).
+8. **Session-Based Authentication for Monoliths & CSRF Protection**:
+   - Uses standard, browser-native `JSESSIONID` cookies with `HttpOnly`, `SameSite=Lax`, and session fixation protection (`migrateSession()`).
+   - Cookie-based CSRF protection is configured via `CookieCsrfTokenRepository.withHttpOnlyFalse()`. The client reads `XSRF-TOKEN` and sends it as `X-XSRF-TOKEN` on mutating HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`). All `/api/admin/**` endpoints strictly require `ROLE_ADMIN`.
 

@@ -234,7 +234,39 @@ All errors are trapped by `GlobalExceptionHandler` mapping:
 - `MethodArgumentNotValidException` → `400 Bad Request` with field breakdown
 - `ResourceNotFoundException` → `404 Not Found`
 - `InsufficientStockException` → `409 Conflict`
-- `InvalidStatusTransitionException` → `400 Bad Request`
+- `BadRequestException` → `400 Bad Request`
 - `AccessDeniedException` → `403 Forbidden`
 - `AuthenticationException` → `401 Unauthorized`
 - General `Exception` → `500 Internal Server Error` (with secure sanitized message)
+
+---
+
+## 7. Administrative Domain, Inventory Management & Financial Analytics (Phase 5)
+
+### 7.1 Historical Purchase Cost Snapshots for Gross Profit
+In retail e-commerce, supplier wholesale costs change continuously. Calculating historical profits using a product's current cost price causes historical distortions.
+- `order_items.unit_cost_snapshot` captures the exact `Product.costPrice` when the checkout transaction commits.
+- Deterministic Gross Profit calculation:
+  $$\text{Gross Profit} = \sum_{i \in \text{items}} (\text{lineTotal}_i - (\text{unitCostSnapshot}_i \times \text{quantity}_i))$$
+- Cancelled orders are strictly excluded from financial revenue, order count, and gross profit metrics.
+
+### 7.2 Order Fulfillment Lifecycle State Machine
+Orders follow a strict non-cyclical lifecycle:
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING
+    PENDING --> CONFIRMED : Payment Successful
+    PENDING --> CANCELLED : Customer / Admin Cancel
+    CONFIRMED --> SHIPPED : Dispatch with Tracking
+    CONFIRMED --> CANCELLED : Cancellation & Auto-Restore
+    SHIPPED --> DELIVERED : Delivery Confirmed
+    DELIVERED --> [*] : Terminal State
+    CANCELLED --> [*] : Terminal State
+```
+- **Automated Inventory Restoration on Cancellation**:
+  When an order in an inventory-holding state (`PENDING` or `CONFIRMED`) is cancelled, the transaction locks each ordered product row using `@Lock(LockModeType.PESSIMISTIC_WRITE)`, restores `stock_quantity = stock_quantity + item.quantity`, and records an `ORDER_CANCELLED_RESTORE` audit log.
+
+### 7.3 Continuous Daily Time-Series Generation
+Standard SQL `GROUP BY DATE(created_at)` produces gaps on days without transactions, distorting chart rendering.
+- `AdminDashboardServiceImpl` initializes every calendar date within the requested period with zeroed metrics before aggregating orders.
+- This guarantees a continuous, uniform daily data array for frontend charts without visual gaps or scaling distortions.

@@ -30,6 +30,9 @@ public class OrderItem {
     @Column(name = "unit_price_snapshot", nullable = false, precision = 12, scale = 2)
     private BigDecimal unitPriceSnapshot;
 
+    @Column(name = "unit_cost_snapshot", precision = 12, scale = 2)
+    private BigDecimal unitCostSnapshot;
+
     @Column(nullable = false)
     private Integer quantity;
 
@@ -46,6 +49,18 @@ public class OrderItem {
         this.productNameSnapshot = productNameSnapshot;
         this.productSkuSnapshot = productSkuSnapshot;
         this.unitPriceSnapshot = unitPriceSnapshot;
+        this.quantity = quantity;
+        this.lineTotal = lineTotal;
+    }
+
+    public OrderItem(Order order, Product product, String productNameSnapshot, String productSkuSnapshot,
+                     BigDecimal unitPriceSnapshot, BigDecimal unitCostSnapshot, Integer quantity, BigDecimal lineTotal) {
+        this.order = order;
+        this.product = product;
+        this.productNameSnapshot = productNameSnapshot;
+        this.productSkuSnapshot = productSkuSnapshot;
+        this.unitPriceSnapshot = unitPriceSnapshot;
+        this.unitCostSnapshot = unitCostSnapshot;
         this.quantity = quantity;
         this.lineTotal = lineTotal;
     }
@@ -96,6 +111,14 @@ public class OrderItem {
 
     public void setUnitPriceSnapshot(BigDecimal unitPriceSnapshot) {
         this.unitPriceSnapshot = unitPriceSnapshot;
+    }
+
+    public BigDecimal getUnitCostSnapshot() {
+        return unitCostSnapshot;
+    }
+
+    public void setUnitCostSnapshot(BigDecimal unitCostSnapshot) {
+        this.unitCostSnapshot = unitCostSnapshot;
     }
 
     public Integer getQuantity() {

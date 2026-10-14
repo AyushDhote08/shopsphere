@@ -39,6 +39,11 @@ export const auth = {
                 <li><a href="/index.html" class="nav-link">Catalog</a></li>
             `;
             if (user) {
+                if (user.role === 'ROLE_ADMIN') {
+                    linksHtml += `
+                        <li><a href="/admin.html" class="nav-link" style="color: #6366f1; font-weight: 700;">Admin Console</a></li>
+                    `;
+                }
                 linksHtml += `
                     <li><a href="/orders.html" class="nav-link">My Orders</a></li>
                 `;

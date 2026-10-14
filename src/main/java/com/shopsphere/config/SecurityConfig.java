@@ -66,6 +66,7 @@ public class SecurityConfig {
                                 "/checkout.html",
                                 "/order-confirmation.html",
                                 "/orders.html",
+                                "/admin.html",
                                 "/login.html",
                                 "/register.html",
                                 "/css/**",

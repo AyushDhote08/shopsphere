@@ -152,17 +152,20 @@ public class OrderServiceImpl implements OrderService {
         // 8. Deduct Stock & Create Inventory Audit Logs
         for (CartItem ci : cartItems) {
             Product product = productMap.get(ci.getProduct().getId());
-            int newStock = product.getStockQuantity() - ci.getQuantity();
+            int oldStock = product.getStockQuantity();
+            int newStock = oldStock - ci.getQuantity();
             product.setStockQuantity(newStock);
             productRepository.save(product);
 
             InventoryAuditLog auditLog = new InventoryAuditLog(
                     product,
+                    oldStock,
                     -ci.getQuantity(),
                     newStock,
                     "ORDER_DEDUCTION",
                     orderNumber,
-                    "Order placed: " + orderNumber
+                    "Order placed: " + orderNumber,
+                    user
             );
             inventoryAuditLogRepository.save(auditLog);
         }
@@ -187,6 +190,7 @@ public class OrderServiceImpl implements OrderService {
         for (CartItem ci : cartItems) {
             Product product = productMap.get(ci.getProduct().getId());
             BigDecimal unitPrice = product.getSellingPrice();
+            BigDecimal unitCost = product.getCostPrice();
             BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(ci.getQuantity()))
                     .setScale(2, RoundingMode.HALF_UP);
 
@@ -196,6 +200,7 @@ public class OrderServiceImpl implements OrderService {
                     product.getName(),
                     product.getSku(),
                     unitPrice,
+                    unitCost,
                     ci.getQuantity(),
                     lineTotal
             );

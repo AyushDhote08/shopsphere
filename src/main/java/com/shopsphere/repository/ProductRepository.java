@@ -30,8 +30,20 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.stockQuantity <= p.lowStockThreshold")
     List<Product> findLowStockProducts();
 
+    @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.stockQuantity <= p.lowStockThreshold")
+    Page<Product> findLowStockProducts(Pageable pageable);
+
     @Query("SELECT COUNT(p) FROM Product p WHERE p.isActive = true AND p.stockQuantity <= p.lowStockThreshold")
     long countLowStockProducts();
+
+    @Query("SELECT coalesce(SUM(p.stockQuantity * p.costPrice), 0.0) FROM Product p WHERE p.isActive = true")
+    java.math.BigDecimal calculateTotalCostValue();
+
+    @Query("SELECT coalesce(SUM(p.stockQuantity * p.sellingPrice), 0.0) FROM Product p WHERE p.isActive = true")
+    java.math.BigDecimal calculateTotalRetailValue();
+
+    @Query("SELECT coalesce(SUM(p.stockQuantity), 0) FROM Product p WHERE p.isActive = true")
+    long calculateTotalUnitsInStock();
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Product p WHERE p.id = :id")

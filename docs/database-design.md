@@ -245,14 +245,14 @@ erDiagram
 
 ### Table: `inventory_audit_log`
 - Immutable ledger tracking every change in product stock.
-- Movement types: `RESTOCK`, `ORDER_DEDUCTION`, `ORDER_RESTORE`, `MANUAL_ADJUSTMENT`.
-- Logs `quantity_changed`, `stock_after`, `reference_id` (e.g. Order #), and admin `created_by_user_id`.
+- Movement types: `RESTOCK`, `ORDER_DEDUCTION`, `ORDER_CANCELLED_RESTORE`, `MANUAL_ADJUSTMENT`.
+- Columns: `product_id`, `stock_before`, `quantity_changed`, `stock_after`, `movement_type`, `reference_id` (e.g. Order # or Batch #), `reason`, `user_id` (FK to `users`), `created_at`.
 
 ---
 
 ## 3. Indexing & Performance Strategy
 1. **Primary & Unique Indexes**:
-   - `users(email)`, `users(username)`
+   - `users(email)`
    - `products(sku)`, `products(slug)`
    - `categories(slug)`
    - `orders(order_number)`
@@ -262,7 +262,10 @@ erDiagram
    - `idx_orders_user`: `orders(user_id)`
    - `idx_order_items_order`: `order_items(order_id)`
    - `idx_cart_items_cart`: `cart_items(cart_id)`
-   - `idx_reviews_product`: `reviews(product_id)`
-3. **Operational & Filtering Indexes**:
+   - `idx_inventory_audit_product`: `inventory_audit_log(product_id)`
+   - `idx_inventory_audit_user`: `inventory_audit_log(user_id)`
+3. **Operational, Reporting & Filtering Indexes (V5 Migration)**:
    - `idx_products_active_stock`: `products(is_active, stock_quantity)` — for catalog and low-stock filters.
-   - `idx_orders_status_date`: `orders(order_status, placed_at)` — for admin fulfillment and sales reporting queries.
+   - `idx_orders_status_created`: `orders(order_status, created_at)` — composite index accelerating admin date-range revenue aggregation and order status filtering.
+   - `idx_inventory_audit_created`: `inventory_audit_log(created_at)` — index for fast chronological audit retrieval.
+   - `idx_inventory_audit_movement`: `inventory_audit_log(movement_type)` — index for filtering stock adjustments vs supplier restocks.

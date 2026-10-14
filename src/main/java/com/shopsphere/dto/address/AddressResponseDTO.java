@@ -15,6 +15,19 @@ public class AddressResponseDTO {
     public AddressResponseDTO() {
     }
 
+    public AddressResponseDTO(Long id, String recipientName, String phone, String streetAddress,
+                              String city, String state, String postalCode, String country, boolean isDefault) {
+        this.id = id;
+        this.recipientName = recipientName;
+        this.phone = phone;
+        this.streetAddress = streetAddress;
+        this.city = city;
+        this.state = state;
+        this.postalCode = postalCode;
+        this.country = country;
+        this.isDefault = isDefault;
+    }
+
     public Long getId() {
         return id;
     }
