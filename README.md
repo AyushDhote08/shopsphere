@@ -2,6 +2,25 @@
 
 ShopSphere is an enterprise-grade full-stack e-commerce and inventory management application built with **Spring Boot 3.4**, **Java 21/24**, **Spring Security**, **Spring Data JPA / Hibernate**, **MySQL 8.0**, **Flyway Migrations**, and **Vanilla ES6 JavaScript**, designed with strict layered architecture, zero client-side pricing trust, session-based security, and professional REST API standards.
 
+- **Live Production Demo**: `https://shopsphere-demo.yourdomain.com` *(Deployment ready; pending live hosting launch)*
+- **GitHub Repository**: `https://github.com/your-username/shopsphere`
+- **Swagger UI Interactive Docs**: `http://localhost:8080/swagger-ui.html`
+- **Automated Test Suite**: **144 Tests Passing** (100% automated pass rate via JUnit 5, Mockito, MockMvc, and Spring Boot Test)
+
+---
+
+## Resume Ready Project Description (Java Full Stack Developer)
+
+> **ShopSphere — Full-Stack E-commerce & Inventory Management Platform**
+> *Tech Stack: Java 21, Spring Boot 3.4, Spring Security, Spring Data JPA, Hibernate, MySQL 8.0, Flyway, HTML5, CSS3, Vanilla ES6 JavaScript, JUnit 5, Docker.*
+> - Engineered an enterprise-grade e-commerce monolith with persistent relational shopping cart, order fulfillment lifecycle, inventory management, and live sales analytics.
+> - Eliminated overselling and race conditions under concurrent checkouts using JPA pessimistic write locking (`SELECT ... FOR UPDATE`), validated by multi-threaded stress testing.
+> - Designed zero-trust server-side financial calculation engine using `BigDecimal` and `DECIMAL(12, 2)` monetary columns for subtotal, taxes, shipping, and historical profit snapshots.
+> - Built role-based session authentication (`ROLE_CUSTOMER`, `ROLE_ADMIN`) with BCrypt password hashing, session fixation protection, and double-submit cookie CSRF defense.
+> - Implemented unbroken daily time-series sales reporting, inventory audit logging, and automated warehouse stock restoration upon order cancellation.
+> - Developed responsive, accessible storefront and administrative portal using Vanilla ES6 (no external frameworks), interacting with 30+ documented REST endpoints.
+> - Authored 144 automated tests across unit, integration, validation, security, concurrency, and end-to-end workflows. Packaged multi-stage Docker container for production deployment.
+
 ---
 
 ## 1. High-Level Architecture
@@ -148,13 +167,24 @@ mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
 - **Administrative Portal**: [http://localhost:8080/admin.html](http://localhost:8080/admin.html) *(Requires `ROLE_ADMIN`)*
 - **Sign In Page**: [http://localhost:8080/login.html](http://localhost:8080/login.html)
 - **Registration Page**: [http://localhost:8080/register.html](http://localhost:8080/register.html)
+- **Health Check Endpoint**: [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)
 - **Interactive Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 - **OpenAPI 3.0 JSON**: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
 
-### Executing Automated Tests
+### Executing Automated Tests & Packaging
 ```bash
-# Run all 128 unit, integration, validation, repository, concurrency, and security tests
+# Run all 144 unit, integration, validation, repository, concurrency, and security tests
 mvn clean test
+
+# Build and package the production executable standalone JAR
+mvn clean package -DskipTests=false
+
+# Run in production mode with external environment variables
+java -jar target/shopsphere-1.0.0-SNAPSHOT.jar --spring.profiles.active=prod
+
+# Build and run with Docker
+docker build -t shopsphere:latest .
+docker run -p 8080:8080 -e SPRING_PROFILES_ACTIVE=prod -e DB_URL=... -e DB_USERNAME=... -e DB_PASSWORD=... shopsphere:latest
 ```
 
 ---
@@ -183,4 +213,29 @@ mvn clean test
 8. **Session-Based Authentication for Monoliths & CSRF Protection**:
    - Uses standard, browser-native `JSESSIONID` cookies with `HttpOnly`, `SameSite=Lax`, and session fixation protection (`migrateSession()`).
    - Cookie-based CSRF protection is configured via `CookieCsrfTokenRepository.withHttpOnlyFalse()`. The client reads `XSRF-TOKEN` and sends it as `X-XSRF-TOKEN` on mutating HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`). All `/api/admin/**` endpoints strictly require `ROLE_ADMIN`.
+
+---
+
+## 6. Verified Features & Current Limitations
+
+### Verified Features (144 Automated Tests Passing)
+- [x] Product catalog with multi-facet category filters, debounced search, price ranges, and stock status.
+- [x] Role-based session authentication (`ROLE_CUSTOMER`, `ROLE_ADMIN`) with BCrypt (strength 12) and session fixation migration.
+- [x] CSRF protection with automatic `XSRF-TOKEN` cookie handling in Vanilla JavaScript.
+- [x] Persistent database-backed shopping cart with cross-customer data isolation and quantity bounds (max 99 per item).
+- [x] Concurrency-safe checkout using JPA pessimistic write locking (`SELECT ... FOR UPDATE`) preventing double-selling.
+- [x] Server-side recalculation of subtotal, 5% tax, and conditional shipping ($9.99 or free over $100.00).
+- [x] Transactional rollback on simulated payment failures with zero inventory leakage.
+- [x] Customer order history and order confirmation receipts with immutable product/pricing snapshots.
+- [x] Executive admin dashboard with KPI cards, continuous daily sales bar chart, and top-selling products.
+- [x] Warehouse inventory management with reorder thresholds, low-stock warnings, restocking, and manual adjustments.
+- [x] Concurrency-safe inventory audit logging with historical stock before/after, reasons, and user attribution.
+- [x] Automated inventory restoration upon order cancellation with audit log tracking.
+- [x] Production health check probe (`/actuator/health`) and hardened security headers (CSP, X-Frame-Options, MIME sniffing).
+- [x] Multi-stage Docker containerization (<150MB Alpine JRE runtime with non-root security user).
+
+### Current Project Limitations (Design Boundaries)
+- **Payment Processing**: Currently operates on a realistic simulation gateway (`SIMULATED_CARD`, `SIMULATED_UPI`, `SIMULATED_NET_BANKING`) designed for interview demonstrations and transactional ACID verification, rather than a live paid merchant account (e.g. Stripe or Razorpay).
+- **Single Warehouse Inventory**: Stock quantities are tracked per product rather than across multi-location distribution centers.
+- **Product Media Storage**: Images use hosted HTTPS CDN URLs rather than a dedicated cloud S3/Blob storage bucket with direct multipart upload.
 

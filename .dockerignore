@@ -1,0 +1,12 @@
+target/
+.git/
+.gitignore
+.idea/
+*.iml
+.vscode/
+*.log
+.env
+.env.*
+application-secrets.yml
+docs/
+*.md

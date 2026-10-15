@@ -21,7 +21,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.shopsphere.exception.BadRequestException;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -210,5 +212,60 @@ class AdminDashboardServiceTest {
         assertThat(valuation.getTotalUnitsInStock()).isEqualTo(450L);
         assertThat(valuation.getLowStockProductsCount()).isEqualTo(4L);
         assertThat(valuation.getTotalProductsCount()).isEqualTo(25L);
+    }
+
+    @Test
+    @DisplayName("resolveDateRange: Throws BadRequestException when startDate is after endDate")
+    void shouldThrowBadRequestExceptionWhenStartDateAfterEndDate() {
+        LocalDate start = LocalDate.now().plusDays(5);
+        LocalDate end = LocalDate.now();
+
+        assertThatThrownBy(() -> adminDashboardService.getDashboardSummary(start, end))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("cannot be after end date");
+    }
+
+    @Test
+    @DisplayName("resolveDateRange: Throws BadRequestException when future startDate with null endDate")
+    void shouldThrowBadRequestExceptionWhenFutureStartDateWithNullEndDate() {
+        LocalDate futureStart = LocalDate.now().plusDays(10);
+
+        assertThatThrownBy(() -> adminDashboardService.getSalesAnalytics(futureStart, null))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("cannot be after end date");
+    }
+
+    @Test
+    @DisplayName("Zero orders: Gracefully returns zero totals without DivisionByZero or NullPointerException")
+    void shouldHandleZeroOrdersGracefully() {
+        LocalDate start = LocalDate.now().minusDays(5);
+        LocalDate end = LocalDate.now();
+
+        when(orderRepository.findValidOrdersBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(List.of());
+        when(productRepository.count()).thenReturn(10L);
+        when(categoryRepository.countByIsActiveTrue()).thenReturn(2L);
+        when(productRepository.countLowStockProducts()).thenReturn(0L);
+        when(orderRepository.count()).thenReturn(0L);
+        when(orderRepository.countByOrderStatusIn(any())).thenReturn(0L);
+        when(userRepository.countByRole(Role.ROLE_CUSTOMER)).thenReturn(5L);
+
+        AdminDashboardSummaryDTO summary = adminDashboardService.getDashboardSummary(start, end);
+        assertThat(summary.getPeriodOrdersCount()).isEqualTo(0L);
+        assertThat(summary.getPeriodRevenue()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(summary.getPeriodProfit()).isEqualByComparingTo(BigDecimal.ZERO);
+
+        SalesAnalyticsDTO sales = adminDashboardService.getSalesAnalytics(start, end);
+        assertThat(sales.getTotalOrders()).isEqualTo(0L);
+        assertThat(sales.getTotalRevenue()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(sales.getTotalProfit()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(sales.getAverageOrderValue()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(sales.getDailySales()).hasSize(6); // 5 days ago to today inclusive
+
+        List<TopSellingProductDTO> top = adminDashboardService.getTopSellingProducts(5, start, end);
+        assertThat(top).isEmpty();
+
+        List<CategorySalesDTO> catSales = adminDashboardService.getCategorySales(start, end);
+        assertThat(catSales).isEmpty();
     }
 }

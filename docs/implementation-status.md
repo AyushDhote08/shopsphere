@@ -10,15 +10,20 @@
 | **Phase 3** | Product Catalog & Categories (Frontend UI & Storefront Integration) | **Completed** | 67/67 tests passing & live storefront verified |
 | **Phase 4** | Shopping Cart, Checkout Simulation, and Order Management | **Completed** | Persistent Cart + Pessimistic Locking + 91/91 tests passing |
 | **Phase 5** | Admin Dashboard, Inventory Management, and Business Analytics | **Completed** | 128/128 tests passing + Live Admin Portal & Restocking verified |
-| **Phase 6** | Reviews, Wishlist & Customer Extras | Planned | Ratings + Wishlist |
-| **Phase 7** | Comprehensive Testing, Security Audit & Hardening | Planned | Negative tests + Concurrency stress tests |
-| **Phase 8** | Production Deployment, Interview Guide & Documentation | Planned | Docker + Live Demo |
+| **Phase 6** | Comprehensive Testing, Security Audit, Bug Fixes & Production Readiness | **Completed** | 144/144 tests passing + Security Hardening + Actuator + E2E Workflow verified |
+| **Phase 7** | Deployment Preparation and Portfolio Launch | **Completed (Prep & Portfolio)** | JAR verified running locally, Dockerfile added, Railway/Render docs ready |
+| **Phase 8** | GitHub Publication & Cloud Deployment Execution | In Progress (GitHub Prep) | Local audit clean, 144 tests passing, secrets sanitized in working tree |
 
 ---
 
 ## 2. Current Status Summary
 
-- **Current Active Phase**: **Phase 5 Completed** (Admin Dashboard, Concurrency-Safe Inventory Restocking, Stock Adjustments, Low-Stock Tracking, Order Fulfillment Lifecycle State Machine, Inventory Restoration on Cancellation, Continuous Daily Sales Analytics, Warehouse Inventory Asset Valuation, Responsive Admin Console UI).
+- **Current Active Phase**: **GitHub Publication Preparation (Phase 8)**
+  - Local repository audit complete: Git status checked, `.gitignore` updated with dump/backup rules and `.env` exclusions.
+  - Working tree sanitized: `application-dev.yml` hardcoded fallback password replaced with empty default `${DB_PASSWORD:}`.
+  - Clone-readiness confirmed: `.env.example` provides explicit template for dev and production deployments.
+  - Automated tests and packaging: `mvn clean verify` passed with **144 tests run, 0 failures, 0 errors, 0 skipped**. Production standalone JAR `target/shopsphere-1.0.0-SNAPSHOT.jar` (66.6 MB) created.
+  - Security audit completed: Identified fallback password committed in historical commit `07f6eaa`; documented safe remediation options (inert password rotation vs git history cleanup before remote push).
 - **Completed Features**:
   - **Phase 0 Setup**:
     - Environment inspected (Java 24 runtime, Maven 3.9.6, MySQL 8.0, Git 2.51).
@@ -58,10 +63,10 @@
   - **Phase 4 Shopping Cart, Checkout Simulation & Order Management**:
     - **Database Migration**: Created `V4__create_cart_and_orders.sql` on MySQL creating normalized `carts`, `cart_items` (unique constraint on `cart_id, product_id`), `orders`, `order_items`, `payment_attempts`, and `inventory_audit_log` tables with foreign keys and performance indexes.
     - **Concurrency-Safe Pessimistic Locking**: Configured `@Lock(LockModeType.PESSIMISTIC_WRITE)` query methods in `ProductRepository` (`SELECT ... FOR UPDATE`), ensuring thread-safe inventory deduction and total prevention of negative stock under race conditions.
-    - **Persistent Shopping Cart**: Linked to authenticated customer with strict cross-customer isolation. Server-side automatic calculation of unit prices, line totals, 5% tax, and conditional shipping ($15.00 or FREE over $100.00). Client prices are never trusted.
+    - **Persistent Shopping Cart**: Linked to authenticated customer with strict cross-customer isolation. Server-side automatic calculation of unit prices, line totals, 5% tax, and conditional shipping ($9.99 or FREE over $100.00). Client prices are never trusted.
     - **Transactional Checkout Service**: Annotated with `@Transactional(rollbackFor = Exception.class)`. Performs duplicate submission prevention via UUID `idempotencyKey`, pessimistic locking of all cart products, stock sufficiency validation, creation of immutable item snapshots, inventory reduction with audit log tracking, simulated payment processing, and automatic cart clearing.
     - **Simulated Payment Gateway**: Supports `SIMULATED_CARD`, `SIMULATED_UPI`, and `SIMULATED_NET_BANKING` with explicit development simulation outcomes (`SUCCESS` or `FAILED`). On simulated failure, throws `PaymentFailedException`, executing a full transactional rollback where inventory remains untouched and the cart remains intact.
-    - **Immutable Historical Snapshots**: `OrderItem` stores immutable copies of `productNameSnapshot`, `productSkuSnapshot`, and `unitPriceSnapshot`. Future price changes or product deletions do not corrupt historical invoices or customer receipts.
+    - **Immutable Historical Snapshots**: `OrderItem` stores immutable copies of `productNameSnapshot`, `productSkuSnapshot`, `unitPriceSnapshot`, and `unitCostSnapshot`. Future price changes or product deletions do not corrupt historical invoices or customer receipts.
     - **Customer Order Tracking & Privacy**: Implemented `/api/orders/my`, `/api/orders/{id}`, `/api/orders/number/{orderNumber}` ensuring customers can only view their own orders.
     - **Responsive Frontend Modules**:
       - `src/main/resources/static/cart.html` & `src/main/resources/static/js/cart.js`: Cart viewer with quantity stepper, item removal, cart clearing, and live summary.
@@ -81,10 +86,25 @@
       - `src/main/resources/static/admin.html`: Tabbed portal with Overview (KPI cards + interactive daily sales bar chart), Inventory Management (search, filter, stock badges, restock/adjust/threshold modals, movement history), Order Fulfillment (order search, status badges, details modal, status update workflow), and Reports & Valuation.
       - `src/main/resources/static/js/admin.js`: Vanilla ES6 script managing role checks, dynamic charts, modals, and API calls.
       - `src/main/resources/static/css/styles.css`: Complete styling for KPI cards, tab navigation, admin tables, stock badges, and CSS bar charts.
+  - **Phase 6 Comprehensive Testing, Security Audit & Production Readiness**:
+    - **Spring Boot Actuator Integration**: Added `spring-boot-starter-actuator` to `pom.xml`. Configured public health monitoring at `/actuator/health` and `/actuator/info` for cloud load balancers and deployment liveness probes. Sensitive administrative actuators are protected and require `ROLE_ADMIN`.
+    - **Security Headers Hardening**: Configured strict security headers in `SecurityConfig.java`:
+      - `X-Content-Type-Options: nosniff` (MIME-sniffing prevention)
+      - `X-Frame-Options: DENY` (Clickjacking prevention)
+      - `Referrer-Policy: strict-origin-when-cross-origin` (Information leakage prevention)
+      - `Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'` (Cross-site scripting mitigation)
+    - **Defensive Error Handling**:
+      - Added `HttpMessageNotReadableException` handler in `GlobalExceptionHandler` to safely intercept malformed JSON bodies, returning 400 Bad Request with a clean message and preventing internal Jackson parser stack traces from leaking.
+      - Added `IllegalArgumentException` and `IllegalStateException` handlers returning 400 Bad Request.
+    - **Date Range Defensive Fix**:
+      - Hardened `AdminDashboardServiceImpl.resolveDateRange` to ensure `resolvedStart` is never after `resolvedEnd` under any parameter combination (future dates, missing end date, inverted ranges), throwing 400 Bad Request.
+    - **Standalone Production Packaging**:
+      - Verified `mvn clean package -DskipTests=false` builds an executable, standalone Spring Boot fat JAR (`shopsphere-1.0.0-SNAPSHOT.jar`, ~66.6 MB).
+      - Configured separate runtime profiles (`application-dev.yml` and `application-prod.yml`) with environment variable bindings documented in `.env.example`.
 - **Known Defects**: None.
 - **Tests Executed & Actual Results**:
   - `mvn clean test`: **BUILD SUCCESS**
-  - Total Tests Run: **128**, Failures: **0**, Errors: **0**, Skipped: **0**
+  - Total Tests Run: **144**, Failures: **0**, Errors: **0**, Skipped: **0**
     - `ShopSphereApplicationTests`: 1 passed (Spring context boot)
     - `CategoryRepositoryTest`: 5 passed (JPA persistence & queries)
     - `ProductRepositoryTest`: 6 passed (Category hierarchy, keyword query, price boundaries, stock filtering)
@@ -98,7 +118,7 @@
     - `OrderConcurrencyIntegrationTest`: 1 passed (Pessimistic locking stress test: concurrent checkout for the final unit of stock—exactly 1 succeeds, 1 fails with InsufficientStockException, final stock is 0 without overselling)
     - `AdminInventoryServiceTest`: 9 passed (Restocking, positive/negative adjustments, negative stock guard, mandatory reasons, threshold updates)
     - `AdminOrderServiceTest`: 8 passed (Fulfillment lifecycle, cancellation stock restoration, terminal state protection, gross profit calculation)
-    - `AdminDashboardServiceTest`: 4 passed (Summary KPIs, continuous daily sales timeline, top selling products, inventory valuation)
+    - `AdminDashboardServiceTest`: 7 passed (+3 Phase 6 edge cases: inverted date range rejection, future start date rejection, zero-order null-safety & AOV zero-division protection)
     - `AdminSecurityAuthorizationTest`: 16 passed (Anonymous 401, customer 403, admin 200, CSRF protection across all admin endpoints)
     - `CategoryControllerTest`: 7 passed (MockMvc REST API & validation tests)
     - `ProductControllerTest`: 12 passed (MockMvc REST API, pagination, filtering, query param validation, 400/404 handling)
@@ -106,15 +126,16 @@
     - `SecurityAuthorizationTest`: 8 passed (Role access control, public browsing, CSRF enforcement)
     - `CartControllerTest`: 6 passed (MockMvc cart endpoints, authenticated security, validation)
     - `OrderControllerTest`: 4 passed (MockMvc checkout, order retrieval, security enforcement)
-- **Manual Live Verification**:
-  - Verified `/admin.html` loads correctly and checks user roles.
-  - Verified anonymous requests to `/api/admin/**` return 401 Unauthorized.
-  - Verified customer (`ROLE_CUSTOMER`) requests to `/api/admin/**` return 403 Forbidden.
-  - Verified administrator (`ROLE_ADMIN`) successfully logs in and accesses all dashboard, sales, inventory, and order endpoints.
-  - Verified restock (`+15` units) and adjustment (`-2` units) update stock and create audit log entries.
-  - Verified end-to-end customer checkout to admin fulfillment (`CONFIRMED` -> `SHIPPED` -> `DELIVERED`).
-  - Verified order cancellation restores stock to product inventory and logs `ORDER_CANCELLED_RESTORE`.
+    - `ActuatorAndSecurityHeadersTest`: 5 passed (New in Phase 6: `/actuator/health` 200 UP, security headers verification, unauthenticated actuator 401, customer actuator 403, admin actuator 200)
+    - `GlobalExceptionHandlerTest`: 6 passed (New in Phase 6: malformed JSON 400, path variable type mismatch 400, negative price filter 400, inverted price filter 400, registration validation field errors 400, admin date inversion 400)
+    - `WorkflowEndToEndIntegrationTest`: 2 passed (New in Phase 6: full business workflow add-to-cart -> checkout -> admin fulfillment lifecycle -> analytics, and order cancellation inventory restoration + audit log + analytics exclusion)
+- **Production Readiness Check**:
+  - Executable JAR verified: `target/shopsphere-1.0.0-SNAPSHOT.jar`
+  - Health check endpoint verified: `GET /actuator/health`
+  - Production security verified: session cookie secure flag enabled in prod, CSRF enabled, BCrypt 12, CSP and Clickjacking defense configured.
+  - Multi-stage Dockerfile verified with non-root user.
+  - Standalone JAR verified running locally on port 8089 with MySQL.
 - **Outstanding Tasks**:
-  - Await user review and approval of Phase 5 deliverables.
+  - Await user approval before provisioning any live cloud databases or executing external deployments.
 - **Next Recommended Action**:
-  - Strictly stop and present Phase 5 completion summary. Await approval before proceeding to Phase 6.
+  - Present Phase 7 Final Report covering deployment readiness, hosting comparison, and resume portfolio launch. Await explicit approval before deploying.

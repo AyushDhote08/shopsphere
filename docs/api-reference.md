@@ -557,3 +557,28 @@
 ```
 - **Validation**: State machine enforces `PENDING` $\to$ `CONFIRMED` $\to$ `SHIPPED` $\to$ `DELIVERED`. If `CANCELLED` from active holding state, automatically restores stock with pessimistic lock.
 - **Response**: `200 OK`
+
+---
+
+## 8. Production Health & Operations Endpoints (`/actuator`)
+
+### 8.1 Public Health Check Probe
+- **Endpoint**: `GET /actuator/health`
+- **Auth**: Public (Anonymous)
+- **Description**: Standard health and liveness probe for cloud orchestrators (Kubernetes, AWS ALB, Render, Railway).
+- **Response**: `200 OK`
+```json
+{
+  "status": "UP"
+}
+```
+
+### 8.2 Public Application Info
+- **Endpoint**: `GET /actuator/info`
+- **Auth**: Public (Anonymous)
+- **Response**: `200 OK`
+
+### 8.3 Protected Administrative Actuator Endpoints
+- **Endpoint**: `/actuator/**`
+- **Auth**: `ROLE_ADMIN`
+- **Description**: Sensitive operational endpoints are strictly guarded against unauthorized inspection. Anonymous requests yield `401 Unauthorized`; customers yield `403 Forbidden`.

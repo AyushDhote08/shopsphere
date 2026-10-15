@@ -247,11 +247,11 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     }
 
     private LocalDate[] resolveDateRange(LocalDate start, LocalDate end) {
-        if (start != null && end != null && start.isAfter(end)) {
-            throw new BadRequestException("Start date (" + start + ") cannot be after end date (" + end + ")");
-        }
         LocalDate resolvedEnd = (end != null) ? end : LocalDate.now();
         LocalDate resolvedStart = (start != null) ? start : resolvedEnd.minusDays(29);
+        if (resolvedStart.isAfter(resolvedEnd)) {
+            throw new BadRequestException("Start date (" + resolvedStart + ") cannot be after end date (" + resolvedEnd + ")");
+        }
         return new LocalDate[]{resolvedStart, resolvedEnd};
     }
 }
