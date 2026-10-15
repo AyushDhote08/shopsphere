@@ -41,6 +41,18 @@ When running in production (`SPRING_PROFILES_ACTIVE=prod`):
 | `DB_USERNAME` | Yes | Cloud database username | `root` or generated user |
 | `DB_PASSWORD` | Yes | Cloud database password | Strong generated secret |
 | `PORT` | Auto | Port injected by cloud platform | `8080` (Render/Railway inject this dynamically) |
+| `APP_ADMIN_EMAIL` | Optional | Initial production administrator email | `admin@yourdomain.com` |
+| `APP_ADMIN_PASSWORD` | Optional | Initial production administrator password | Secure random string (min 8 chars) |
+
+### 2.3 Production Administrator Security & Provisioning
+Flyway migration `V6` removes the development demo account (`admin@shopsphere.com`) upon database migration, ensuring production environments never retain publicly documented accounts.
+
+To establish your initial production administrator:
+- **Method 1 (Automated Environment Injection)**: Provide `APP_ADMIN_EMAIL` and `APP_ADMIN_PASSWORD` in your hosting dashboard variables. `ProductionAdminInitializer` creates the admin once on initial container boot.
+- **Method 2 (Database Console Promotion)**: Register normally via `https://your-domain/register.html`, then promote via your database console:
+  ```sql
+  UPDATE users SET role = 'ROLE_ADMIN' WHERE email = 'your-email@yourdomain.com';
+  ```
 
 ---
 

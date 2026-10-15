@@ -153,9 +153,17 @@ CREATE DATABASE IF NOT EXISTS shopsphere_db CHARACTER SET utf8mb4 COLLATE utf8mb
 mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
-### Development Demo Accounts
-- **Administrator**: `admin@shopsphere.com` / `Admin@12345` (Role: `ROLE_ADMIN`)
+### Development Demo Accounts (Local Dev Profile Only)
+- **Local Dev Administrator**: `admin@shopsphere.com` / `Admin@12345` (Role: `ROLE_ADMIN` — initialized automatically **only** when `SPRING_PROFILES_ACTIVE=dev`).
 - **Customer Registration**: Visit `http://localhost:8080/register.html` to register a new customer account (Role: `ROLE_CUSTOMER`).
+
+### Production Administrator Provisioning
+In production (`SPRING_PROFILES_ACTIVE=prod`), the default demo admin account is automatically removed by Flyway migration `V6` to eliminate publicly known credentials. To establish your production administrator, use either:
+1. **Environment Variables**: Configure `APP_ADMIN_EMAIL` and `APP_ADMIN_PASSWORD` in your cloud provider environment settings. The application initializes this administrator once on startup.
+2. **Database Promotion**: Register a normal user account via `/register.html`, then promote it via your private database console:
+   ```sql
+   UPDATE users SET role = 'ROLE_ADMIN' WHERE email = 'your-email@domain.com';
+   ```
 
 ### Web Interface & Documentation URLs
 - **Storefront Catalog**: [http://localhost:8080/index.html](http://localhost:8080/index.html)

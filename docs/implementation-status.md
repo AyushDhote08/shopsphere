@@ -18,12 +18,15 @@
 
 ## 2. Current Status Summary
 
-- **Current Active Phase**: **GitHub Publication Preparation (Phase 8)**
+- **Current Active Phase**: **GitHub Publication Preparation & Production Admin Security (Phase 8)**
   - Local repository audit complete: Git status checked, `.gitignore` updated with dump/backup rules and `.env` exclusions.
-  - Working tree sanitized: `application-dev.yml` hardcoded fallback password replaced with empty default `${DB_PASSWORD:}`.
+  - Working tree and Git history sanitized: `application-dev.yml` hardcoded fallback password replaced with `${DB_PASSWORD:}` across all 9 commits using `git-filter-repo`.
+  - Production admin security fix implemented:
+    - Added Flyway migration `V6__remove_default_admin_seed.sql` ensuring production databases never retain the public demo account.
+    - Added `DevAdminDataLoader` (`@Profile("dev")`) so local development retains convenient admin access.
+    - Added `ProductionAdminInitializer` (`@Profile("prod")`) supporting `APP_ADMIN_EMAIL` and `APP_ADMIN_PASSWORD` environment variables for secure production bootstrapping.
+    - Added unit test suites `DevAdminDataLoaderTest` and `ProductionAdminInitializerTest`.
   - Clone-readiness confirmed: `.env.example` provides explicit template for dev and production deployments.
-  - Automated tests and packaging: `mvn clean verify` passed with **144 tests run, 0 failures, 0 errors, 0 skipped**. Production standalone JAR `target/shopsphere-1.0.0-SNAPSHOT.jar` (66.6 MB) created.
-  - Security audit completed: Identified fallback password committed in historical commit `07f6eaa`; documented safe remediation options (inert password rotation vs git history cleanup before remote push).
 - **Completed Features**:
   - **Phase 0 Setup**:
     - Environment inspected (Java 24 runtime, Maven 3.9.6, MySQL 8.0, Git 2.51).
