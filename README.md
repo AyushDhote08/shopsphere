@@ -1,11 +1,11 @@
 # ShopSphere — Full-Stack E-commerce & Inventory Management Platform
 
-ShopSphere is an enterprise-grade full-stack e-commerce and inventory management application built with **Spring Boot 3.4**, **Java 21/24**, **Spring Security**, **Spring Data JPA / Hibernate**, **MySQL 8.0**, **Flyway Migrations**, and **Vanilla ES6 JavaScript**, designed with strict layered architecture, zero client-side pricing trust, session-based security, and professional REST API standards.
+ShopSphere is an enterprise-grade full-stack e-commerce and inventory management application built with **Spring Boot 3.4**, **Java 21 LTS**, **Spring Security**, **Spring Data JPA / Hibernate**, **MySQL 8.0**, **Flyway Migrations**, and **Vanilla ES6 JavaScript**, designed with strict layered architecture, zero client-side pricing trust, session-based security, and professional REST API standards.
 
-- **Live Production Demo**: `https://shopsphere-demo.yourdomain.com` *(Deployment ready; pending live hosting launch)*
-- **GitHub Repository**: `https://github.com/your-username/shopsphere`
-- **Swagger UI Interactive Docs**: `http://localhost:8080/swagger-ui.html`
-- **Automated Test Suite**: **144 Tests Passing** (100% automated pass rate via JUnit 5, Mockito, MockMvc, and Spring Boot Test)
+- **Deployment Status**: Deployment pending *(Cloud deployment preparation complete; production hosting not yet provisioned)*
+- **GitHub Repository**: [AyushDhote08/shopsphere](https://github.com/AyushDhote08/shopsphere)
+- **API Documentation**: OpenAPI 3.0 / Swagger UI (accessible at `/swagger-ui.html` during local development)
+- **Automated Test Suite**: **149 Tests Passing** (149 passed, 0 failed, 0 skipped — 100% automated pass rate via JUnit 5, Mockito, MockMvc, and Spring Boot Test)
 
 ---
 
@@ -19,7 +19,7 @@ ShopSphere is an enterprise-grade full-stack e-commerce and inventory management
 > - Built role-based session authentication (`ROLE_CUSTOMER`, `ROLE_ADMIN`) with BCrypt password hashing, session fixation protection, and double-submit cookie CSRF defense.
 > - Implemented unbroken daily time-series sales reporting, inventory audit logging, and automated warehouse stock restoration upon order cancellation.
 > - Developed responsive, accessible storefront and administrative portal using Vanilla ES6 (no external frameworks), interacting with 30+ documented REST endpoints.
-> - Authored 144 automated tests across unit, integration, validation, security, concurrency, and end-to-end workflows. Packaged multi-stage Docker container for production deployment.
+> - Authored 149 automated tests across unit, integration, validation, security, concurrency, and end-to-end workflows. Packaged multi-stage Docker container for production deployment.
 
 ---
 
@@ -27,24 +27,72 @@ ShopSphere is an enterprise-grade full-stack e-commerce and inventory management
 
 ```mermaid
 flowchart TD
-    Client["Client Browser (Vanilla JS / HTML5)"] -->|HTTP Cookies & JSON| SecFilter["Spring Security Filter Chain\n(CsrfFilter, SessionAuth, RoleGuards)"]
-    SecFilter -->|Valid Session & CSRF| Controller["Controller Layer (@RestController)"]
-    Controller -->|DTOs & Validation| Service["Service Layer (@Service, @Transactional)"]
-    Service -->|Entities & Specifications| Repository["Repository Layer (Spring Data JPA)"]
-    Repository -->|ACID SQL Queries| Database[(MySQL 8.0 Engine / InnoDB)]
-    Flyway["Flyway Migration Engine"] -.->|Applies V1, V2, V3 Migrations| Database
+    subgraph ClientLayer["Frontend Presentation (Vanilla ES6 / HTML5 / CSS3)"]
+        Storefront["Storefront UI\n(Catalog, Cart, Checkout, Orders)"]
+        AdminPortal["Admin Console\n(Inventory, Restock, Sales Analytics)"]
+    end
+
+    subgraph SecurityLayer["Security & Gateway (Spring Security)"]
+        FilterChain["Security Filter Chain\n- Session Cookie (JSESSIONID)\n- CSRF Defense (CookieCsrfTokenRepository)\n- Role Guards (ROLE_CUSTOMER, ROLE_ADMIN)\n- Hardened Headers (CSP, Frame Options)"]
+    end
+
+    subgraph ControllerLayer["REST Controller Layer (@RestController)"]
+        AuthCtrl["AuthController"]
+        CatalogCtrl["Product & Category Controllers"]
+        CartCtrl["CartController"]
+        OrderCtrl["OrderController"]
+        AdminCtrl["Admin Dashboard & Inventory Controllers"]
+    end
+
+    subgraph ServiceLayer["Business Logic & Transactions (@Service)"]
+        AuthService["AuthService (BCrypt Cost 12)"]
+        CatalogService["Product & Category Services"]
+        CartService["CartService (Server Recalculation)"]
+        OrderService["OrderService (@Transactional, Pessimistic Locking)"]
+        AdminService["Admin & Analytics Services (Continuous Time-Series)"]
+    end
+
+    subgraph PersistenceLayer["Data Access & Persistence (Spring Data JPA)"]
+        Repositories["JPA Repositories & Specifications"]
+        FlywayEngine["Flyway Migration Engine\n(Versioned Scripts V1 - V6)"]
+    end
+
+    subgraph DatabaseLayer["Relational Database (MySQL 8.0)"]
+        MySQL[(MySQL InnoDB Engine\nACID Transactions & Row Locks)]
+    end
+
+    Storefront -->|HTTP / JSON| FilterChain
+    AdminPortal -->|HTTP / JSON| FilterChain
+    FilterChain --> AuthCtrl
+    FilterChain --> CatalogCtrl
+    FilterChain --> CartCtrl
+    FilterChain --> OrderCtrl
+    FilterChain --> AdminCtrl
+    AuthCtrl --> AuthService
+    CatalogCtrl --> CatalogService
+    CartCtrl --> CartService
+    OrderCtrl --> OrderService
+    AdminCtrl --> AdminService
+    AuthService --> Repositories
+    CatalogService --> Repositories
+    CartService --> Repositories
+    OrderService --> Repositories
+    AdminService --> Repositories
+    Repositories --> MySQL
+    FlywayEngine -.->|Applies Migrations V1-V6| MySQL
 ```
 
 ---
 
 ## 2. Tech Stack
 
-- **Backend**: Java 21 LTS (`--release 21`), Spring Boot 3.4.3, Spring Web, Spring Security, Spring Data JPA, Hibernate 6.6, Jakarta Bean Validation.
-- **Database**: MySQL 8.0 (InnoDB engine), Flyway migrations.
+- **Backend**: Java 21 LTS (target release: Java 21 via `<release>21` in `pom.xml`; Docker runtime: Eclipse Temurin JRE 21 Alpine; compiled and verified on local JDK 24 environment), Spring Boot 3.4.3, Spring Web, Spring Security, Spring Data JPA, Hibernate 6.6, Jakarta Bean Validation.
+- **Database**: MySQL 8.0 (InnoDB engine), Flyway migrations (`V1` through `V6`).
+- **Containerization**: Multi-stage Dockerfile (Eclipse Temurin JDK 21 build stage + Eclipse Temurin JRE 21 Alpine runtime stage, unprivileged non-root user).
 - **Frontend**: HTML5, CSS3 Modern Design System, Vanilla ES6 JavaScript (zero SPA frameworks).
 - **Security**: Spring Security session-based auth, BCrypt password hashing (strength 12), Cookie-based CSRF protection (`XSRF-TOKEN`), Role-based access control (`ROLE_CUSTOMER`, `ROLE_ADMIN`).
 - **Testing**: JUnit 5, Mockito, Spring Boot Test, MockMvc, Spring Security Test, AssertJ, H2 in-memory test database.
-- **API Documentation**: Springdoc OpenAPI 3.0 / Swagger UI (`/swagger-ui.html`).
+- **API Documentation**: Springdoc OpenAPI 3.0 / Swagger UI.
 - **Build Tool**: Maven 3.9+.
 
 ---
@@ -137,7 +185,7 @@ flowchart TD
 ## 4. Local Setup & Execution
 
 ### Prerequisites
-- JDK 21 or 24 installed
+- JDK 21+ (Java 21 LTS release target; compiled and verified on local JDK 24)
 - Apache Maven 3.9+
 - MySQL 8.0 Server running on port 3306
 
@@ -181,11 +229,14 @@ In production (`SPRING_PROFILES_ACTIVE=prod`), the default demo admin account is
 
 ### Executing Automated Tests & Packaging
 ```bash
-# Run all 144 unit, integration, validation, repository, concurrency, and security tests
+# Execute test suite (runs all 149 unit, integration, validation, repository, and security tests)
 mvn clean test
 
-# Build and package the production executable standalone JAR
-mvn clean package -DskipTests=false
+# Complete build verification (runs all 149 tests and packages the production executable standalone JAR)
+mvn clean verify
+
+# Package JAR skipping tests (if tests were already verified)
+mvn clean package -DskipTests=true
 
 # Run in production mode with external environment variables
 java -jar target/shopsphere-1.0.0-SNAPSHOT.jar --spring.profiles.active=prod
@@ -226,7 +277,7 @@ docker run -p 8080:8080 -e SPRING_PROFILES_ACTIVE=prod -e DB_URL=... -e DB_USERN
 
 ## 6. Verified Features & Current Limitations
 
-### Verified Features (144 Automated Tests Passing)
+### Verified Features (149 Automated Tests Passing: 149 Passed, 0 Failed, 0 Skipped)
 - [x] Product catalog with multi-facet category filters, debounced search, price ranges, and stock status.
 - [x] Role-based session authentication (`ROLE_CUSTOMER`, `ROLE_ADMIN`) with BCrypt (strength 12) and session fixation migration.
 - [x] CSRF protection with automatic `XSRF-TOKEN` cookie handling in Vanilla JavaScript.
@@ -239,6 +290,7 @@ docker run -p 8080:8080 -e SPRING_PROFILES_ACTIVE=prod -e DB_URL=... -e DB_USERN
 - [x] Warehouse inventory management with reorder thresholds, low-stock warnings, restocking, and manual adjustments.
 - [x] Concurrency-safe inventory audit logging with historical stock before/after, reasons, and user attribution.
 - [x] Automated inventory restoration upon order cancellation with audit log tracking.
+- [x] Environment-specific admin bootstrapping (Flyway V6 demo cleanup + dev auto-seed + secure prod env vars).
 - [x] Production health check probe (`/actuator/health`) and hardened security headers (CSP, X-Frame-Options, MIME sniffing).
 - [x] Multi-stage Docker containerization (<150MB Alpine JRE runtime with non-root security user).
 
